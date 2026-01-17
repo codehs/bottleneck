@@ -39,6 +39,13 @@ export function setupKeyboardShortcuts() {
         return;
       }
 
+      // Open/toggle command palette (Cmd/Ctrl + K)
+      if ((e.key === "k" || e.key === "K") && !e.shiftKey) {
+        e.preventDefault();
+        toggleCommandPalette();
+        return;
+      }
+
       // Show keyboard shortcuts (Cmd/Ctrl + /)
       if (e.key === "/") {
         e.preventDefault();
@@ -85,6 +92,14 @@ export function setupKeyboardShortcuts() {
       if ((e.key === "c" || e.key === "C") && e.shiftKey) {
         e.preventDefault();
         useUIStore.getState().triggerFocusCommentBox();
+        return;
+      }
+
+      // Go to home/PR list (Cmd/Ctrl + Shift + H)
+      if ((e.key === "h" || e.key === "H") && e.shiftKey) {
+        e.preventDefault();
+        const nav = (window as any).__commandNavigate;
+        if (nav) nav("/pulls");
         return;
       }
     }

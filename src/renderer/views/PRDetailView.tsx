@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 // Lazy load DiffEditor to avoid loading Monaco on app startup
 const DiffEditor = lazy(() => import("../components/DiffEditor").then(module => ({ default: module.DiffEditor })));
 import { ConversationTab, ConversationTabRef } from "../components/ConversationTab";
@@ -43,6 +43,7 @@ export default function PRDetailView() {
     repo: string;
     number: string;
   }>();
+  const location = useLocation();
   const { token } = useAuthStore();
   const { theme } = useUIStore();
   const { updatePR, pullRequests } = usePRStore();
@@ -56,7 +57,7 @@ export default function PRDetailView() {
   );
 
   const [activeTab, setActiveTab] = useState<"conversation" | "files" | "comments">(
-    "files",
+    (location.state as any)?.activeTab || "files",
   );
 
   const tabs = ["conversation", "files", "comments"] as const;

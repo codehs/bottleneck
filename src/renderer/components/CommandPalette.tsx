@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Command as CommandIcon, Search, X } from "lucide-react";
+import { Search, X, GitPullRequest, GitPullRequestDraft } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
 import { useSyncStore } from "../stores/syncStore";
 import { useNavigate, useLocation } from "react-router-dom";
+import { usePRStore } from "../stores/prStore";
+import { getPRIcon, getPRColorClass } from "../utils/prStatus";
 
 interface Command {
   id: string;
@@ -135,12 +137,13 @@ const commands: Command[] = [
 
 export default function CommandPalette() {
   const { commandPaletteOpen, toggleCommandPalette } = useUIStore();
+  const { pullRequests } = usePRStore();
   const navigate = useNavigate();
   const location = useLocation();
   // Expose navigate so that commands array can use it without hooks
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    (window as any).__commandNavigate = navigate;
+    ((window as any).__commandNavigate) = navigate;
     return () => {
       delete (window as any).__commandNavigate;
     };
@@ -208,9 +211,61 @@ export default function CommandPalette() {
     return cmds;
   }, [location.pathname]);
 
+  // Create a lookup map for quick PR access by command ID
+  const prLookupMap = useMemo(() => {
+    const map = new Map<string, any>();
+    Array.from(pullRequests.values()).forEach((pr) => {
+      map.set(`pr-${pr.id}`, pr);
+    });
+    return map;
+  }, [pullRequests]);
+
+  // Generate PR search commands
+  const prCommands = useMemo(() => {
+    return Array.from(pullRequests.values())
+      .filter((pr) => pr.state === "open")
+      .map((pr) => ({
+      id: `pr-${pr.id}`,
+      name: `#${pr.number} ${pr.title}`,
+      keywords: `${pr.number} ${pr.title} ${pr.user.login} ${pr.base.repo.owner.login} ${pr.base.repo.name}`,
+      section: "Pull Requests",
+      action: () => {
+        navigate(`/pulls/${pr.base.repo.owner.login}/${pr.base.repo.name}/${pr.number}`, {
+          state: { activeTab: "conversation" }
+        });
+      },
+      preview: (
+        <div className="text-xs">
+          <div className="flex items-center space-x-2 mb-2">
+            <span className={cn("flex-shrink-0", getPRColorClass(pr))}>
+              {(() => {
+                const Icon = getPRIcon(pr);
+                if (Icon === GitPullRequest) {
+                  return <GitPullRequest className="w-4 h-4" />;
+                }
+                return <Icon className="w-4 h-4" />;
+              })()}
+            </span>
+            <span className="font-medium">{pr.base.repo.owner.login}/{pr.base.repo.name}</span>
+          </div>
+          <div className="flex items-center space-x-2 text-gray-400">
+            <img
+              src={pr.user.avatar_url}
+              alt={pr.user.login}
+              className="w-3 h-3 rounded-full"
+            />
+            <span>{pr.user.login}</span>
+            <span>→</span>
+            <span>{pr.base.ref}</span>
+          </div>
+        </div>
+      ),
+    })) as Command[];
+  }, [pullRequests, navigate]);
+
   const allCommands = useMemo(() => {
-    return [...contextualCommands, ...commands];
-  }, [contextualCommands]);
+    return [...contextualCommands, ...commands, ...prCommands];
+  }, [contextualCommands, prCommands]);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return allCommands;
@@ -219,6 +274,30 @@ export default function CommandPalette() {
       (c) => c.name.toLowerCase().includes(q) || c.keywords.includes(q),
     );
   }, [query, allCommands]);
+
+  // Group commands by section
+  const groupedCommands = useMemo(() => {
+    const groups: Record<string, Command[]> = {};
+    filtered.forEach((cmd) => {
+      const section = cmd.section || "Commands";
+      if (!groups[section]) {
+        groups[section] = [];
+      }
+      groups[section].push(cmd);
+    });
+    return groups;
+  }, [filtered]);
+
+  // Flatten grouped commands for index tracking
+  const flattenedForIndex = useMemo(() => {
+    const result: (Command | null)[] = [];
+    Object.keys(groupedCommands).forEach((section) => {
+      groupedCommands[section].forEach((cmd) => {
+        result.push(cmd);
+      });
+    });
+    return result;
+  }, [groupedCommands]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -241,7 +320,7 @@ export default function CommandPalette() {
       }
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedIndex((i) => Math.min(i + 1, filtered.length - 1));
+        setSelectedIndex((i) => Math.min(i + 1, flattenedForIndex.length - 1));
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
@@ -249,7 +328,7 @@ export default function CommandPalette() {
       }
       if (e.key === "Enter") {
         e.preventDefault();
-        filtered[selectedIndex]?.action();
+        flattenedForIndex[selectedIndex]?.action();
         toggleCommandPalette();
       }
       if (e.metaKey || e.ctrlKey) {
@@ -260,18 +339,18 @@ export default function CommandPalette() {
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [commandPaletteOpen, filtered, selectedIndex, toggleCommandPalette]);
+  }, [commandPaletteOpen, flattenedForIndex, selectedIndex, toggleCommandPalette]);
 
   if (!commandPaletteOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-start justify-center pt-24">
+    <div className="fixed inset-0 z-40 flex items-start justify-center pt-12">
       <div
         className="absolute inset-0 bg-black/40"
         onClick={toggleCommandPalette}
       />
       <div
-        className="relative w-full max-w-lg mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
+        className="relative w-full max-w-3xl mx-4 h-2/3 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col"
       >
         <div className="flex items-center px-4 border-b h-12 gap-2 border-gray-200 dark:border-gray-700">
           <Search className="w-4 h-4 text-gray-400 dark:text-gray-500" />
@@ -286,35 +365,71 @@ export default function CommandPalette() {
             <X className="w-4 h-4" />
           </button>
         </div>
-        <ul className="max-h-80 overflow-y-auto py-1">
-          {filtered.length === 0 && (
+        <ul className="flex-1 overflow-y-auto py-2">
+          {flattenedForIndex.length === 0 && (
             <li className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">No commands</li>
           )}
-          {filtered.map((cmd, idx) => (
-            <li
-              key={cmd.id}
-              onMouseEnter={() => setSelectedIndex(idx)}
-              onClick={() => {
-                cmd.action();
-                toggleCommandPalette();
-              }}
-              className={cn(
-                "flex items-center justify-between px-4 py-2 cursor-pointer text-sm",
-                idx === selectedIndex
-                  ? "bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white"
-                  : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700",
-              )}
-            >
-              <span>{cmd.name}</span>
-              {cmd.shortcut && <span className="opacity-60">{cmd.shortcut}</span>}
-            </li>
+          {Object.keys(groupedCommands).map((section) => (
+            <div key={section}>
+              <li className={cn(
+                "px-4 py-1.5 text-xs font-semibold uppercase tracking-wide",
+                "text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50"
+              )}>
+                {section}
+              </li>
+              {groupedCommands[section].map((cmd) => {
+                const globalIdx = flattenedForIndex.indexOf(cmd);
+                const isPR = cmd.id.startsWith("pr-");
+                const pr = isPR ? prLookupMap.get(cmd.id) : null;
+                
+                return (
+                  <li
+                    key={cmd.id}
+                    onMouseEnter={() => setSelectedIndex(globalIdx)}
+                    onClick={() => {
+                      cmd.action();
+                      toggleCommandPalette();
+                    }}
+                    className={cn(
+                      "flex items-center justify-between px-4 py-3 cursor-pointer",
+                      isPR ? "text-sm" : "text-sm",
+                      globalIdx === selectedIndex
+                        ? "bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white"
+                        : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700",
+                    )}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {isPR && pr && (
+                        <>
+                          <img
+                            src={pr.user.avatar_url}
+                            alt={pr.user.login}
+                            className="w-5 h-5 rounded-full flex-shrink-0"
+                            title={pr.user.login}
+                          />
+                          <span className={cn("flex-shrink-0", getPRColorClass(pr))}>
+                            {pr.draft ? (
+                              <GitPullRequestDraft className="w-4 h-4" />
+                            ) : (
+                              <GitPullRequest className="w-4 h-4" />
+                            )}
+                          </span>
+                        </>
+                      )}
+                      <span className="truncate">{cmd.name}</span>
+                    </div>
+                    {cmd.shortcut && <span className="opacity-60 ml-2 flex-shrink-0">{cmd.shortcut}</span>}
+                  </li>
+                );
+              })}
+            </div>
           ))}
         </ul>
-        {isPreviewKey && filtered[selectedIndex]?.preview && (
+        {isPreviewKey && flattenedForIndex[selectedIndex]?.preview && (
           <div
             className="border-t px-4 py-3 text-sm border-gray-200 text-gray-700 dark:border-gray-700 dark:text-gray-300"
           >
-            {filtered[selectedIndex].preview}
+            {flattenedForIndex[selectedIndex].preview}
           </div>
         )}
       </div>
