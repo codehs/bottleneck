@@ -167,6 +167,7 @@ interface PRTreeViewProps {
   onPRClick: (pr: PullRequest) => void;
   onCloseGroup: (prIds: string[]) => void;
   groupActionLabel?: string; // Optional custom label for group action button
+  highlightedPRId?: number; // ID of the PR to highlight as selected
 }
 
 // Helper function to format date and time
@@ -222,6 +223,7 @@ export function PRTreeView({
   onPRClick,
   onCloseGroup,
   groupActionLabel = "Close unmerged PRs?",
+  highlightedPRId,
 }: PRTreeViewProps) {
   const treeItems = useMemo(
     () => buildTreeItems(prsWithMetadata, groupsWithMergedPRs),
@@ -266,6 +268,7 @@ export function PRTreeView({
           }}
           renderItemTitle={({ title, item, ...rest }) => {
             const isSelected = item.data.type === "pr" && item.data.pr ? selectedPRs.has(getPRId(item.data.pr)) : false;
+            const isHighlighted = item.data.type === "pr" && item.data.pr && item.data.pr.id === highlightedPRId;
             // Get agent name from PR metadata
             const prAgent = item.data.type === "pr" && item.data.pr
               ? prsWithMetadata.find(m => m.pr.id === item.data.pr!.id)?.agent
@@ -326,6 +329,8 @@ export function PRTreeView({
                   // Force override any inherited styles from react-complex-tree
                   backgroundColor: isSelected
                     ? (theme === "dark" ? "rgb(55 65 81)" : "rgb(239 246 255)")
+                    : isHighlighted
+                    ? (theme === "dark" ? "rgb(30 58 138)" : "rgb(191 219 254)")
                     : "transparent",
                   color: theme === "dark" ? "rgb(243 244 246)" : "rgb(17 24 39)",
                   borderTop: isTopLevel && isFirstTopLevel
@@ -339,7 +344,7 @@ export function PRTreeView({
                   // Add hover effect via onMouseEnter/onMouseLeave if needed
                 }}
                 onMouseEnter={(e) => {
-                  if (!isSelected) {
+                  if (!isSelected && !isHighlighted) {
                     e.currentTarget.style.backgroundColor = theme === "dark" ? "rgb(31 41 55)" : "rgb(243 244 246)";
                   }
                   if (item.data.type === "task") {
@@ -349,7 +354,7 @@ export function PRTreeView({
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (!isSelected) {
+                  if (!isSelected && !isHighlighted) {
                     e.currentTarget.style.backgroundColor = "transparent";
                   }
                   if (item.data.type === "task") {

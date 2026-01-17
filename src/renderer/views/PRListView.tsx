@@ -60,6 +60,8 @@ export default function PRListView() {
   const [isClosing, setIsClosing] = useState(false);
   const [showTeamDialog, setShowTeamDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPRIndex, setSelectedPRIndex] = useState<number>(0);
+  const searchFilteredPRsRef = useRef<PullRequest[]>([]);
 
   const sortBy = prListFilters.sortBy;
   const selectedAuthors = useMemo(
@@ -94,10 +96,6 @@ export default function PRListView() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showAuthorDropdown, showStatusDropdown]);
-
-
-  // Removed automatic stats fetching - was causing performance issues
-  // Stats will be included in the optimized GraphQL query instead
 
   const selectedRepoKey = useMemo(() => {
     if (!selectedRepo) return null;
@@ -353,6 +351,12 @@ export default function PRListView() {
     });
   }, [getFilteredPRs, searchQuery]);
 
+  // Update ref and reset selectedPRIndex when PR list changes
+  useEffect(() => {
+    searchFilteredPRsRef.current = searchFilteredPRs;
+    setSelectedPRIndex(0);
+  }, [searchFilteredPRs.length, selectedRepo?.name]);
+
   // Pre-compute PR metadata for grouping
   const prsWithMetadata = useMemo<PRWithMetadata[]>(() => {
     return searchFilteredPRs.map((pr) => getPRMetadata(pr));
@@ -464,6 +468,42 @@ export default function PRListView() {
     },
     [selectPR, deselectPR],
   );
+
+  // Handle keyboard navigation (j/k for next/previous, Enter to open)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if typing in an input or if dropdowns are open
+      if (showAuthorDropdown || showStatusDropdown) {
+        return;
+      }
+
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      const prs = searchFilteredPRsRef.current;
+
+      if (e.key === 'j') {
+        e.preventDefault();
+        setSelectedPRIndex((prev) => {
+          const nextIndex = Math.min(prev + 1, prs.length - 1);
+          return nextIndex;
+        });
+      } else if (e.key === 'k') {
+        e.preventDefault();
+        setSelectedPRIndex((prev) => Math.max(prev - 1, 0));
+      } else if (e.key === 'Enter' || e.key === 'o') {
+        e.preventDefault();
+        if (prs.length > 0 && selectedPRIndex < prs.length) {
+          const selectedPR = prs[selectedPRIndex];
+          handlePRClick(selectedPR);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPRIndex, showAuthorDropdown, showStatusDropdown, handlePRClick]);
 
   const closableSelectedPRIds = useMemo(() => {
     const ids: string[] = [];
@@ -1080,6 +1120,7 @@ export default function PRListView() {
             onToggleGroupSelection={handleGroupSelection}
             onPRClick={handlePRClick}
             onCloseGroup={handleCloseGroup}
+            highlightedPRId={searchFilteredPRs[selectedPRIndex]?.id}
           />
         )}
       </div>
