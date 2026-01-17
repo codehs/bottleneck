@@ -58,6 +58,27 @@ export default function PRDetailView() {
   const [activeTab, setActiveTab] = useState<"conversation" | "files" | "comments">(
     "files",
   );
+
+  const tabs = ["conversation", "files", "comments"] as const;
+  
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey && e.shiftKey && (e.key === "]" || e.key === "[")) {
+        e.preventDefault();
+        const currentIndex = tabs.indexOf(activeTab);
+        if (e.key === "]") {
+          const nextIndex = (currentIndex + 1) % tabs.length;
+          setActiveTab(tabs[nextIndex]);
+        } else {
+          const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+          setActiveTab(tabs[prevIndex]);
+        }
+      }
+    };
+    
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeTab]);
   const [pr, setPR] = useState<PullRequest | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
