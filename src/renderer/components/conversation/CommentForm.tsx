@@ -1,33 +1,75 @@
-import { useState } from "react";
+import { useState, useRef, useImperativeHandle, forwardRef } from "react";
 import { Send } from "lucide-react";
 import { cn } from "../../utils/cn";
-import { PullRequest } from "../../services/github";
+import { PullRequest, Comment, Review } from "../../services/github";
+
+export type CommentSubmitResult = 
+  | { type: "comment"; comment: Comment }
+  | { type: "review"; review: Review };
 
 interface CommentFormProps {
   pr: PullRequest;
   user: { avatar_url: string; login: string } | null;
   token: string | null;
   theme: "light" | "dark";
-  onCommentSubmit: () => void;
+  onCommentSubmit: (result: CommentSubmitResult) => void;
 }
 
-export function CommentForm({
+export interface CommentFormRef {
+  focus: () => void;
+}
+
+export const CommentForm = forwardRef<CommentFormRef, CommentFormProps>(function CommentForm({
   pr,
   user,
   token,
   theme,
   onCommentSubmit,
-}: CommentFormProps) {
+}, ref) {
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reviewType, setReviewType] = useState<
     "comment" | "approve" | "request_changes"
   >("comment");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      textareaRef.current?.focus();
+    },
+  }));
 
   const handleSubmitComment = async () => {
-    if (!commentText.trim() || !token) return;
+    if (!commentText.trim() || !token || !user) return;
 
+    const submittedText = commentText;
     setIsSubmitting(true);
+    setCommentText("");
+
+    // Create optimistic comment/review immediately
+    const now = new Date().toISOString();
+    if (reviewType === "comment") {
+      const optimisticComment: Comment = {
+        id: Date.now(), // Temporary ID
+        body: submittedText,
+        user: { login: user.login, avatar_url: user.avatar_url },
+        created_at: now,
+        updated_at: now,
+        html_url: "",
+      };
+      onCommentSubmit({ type: "comment", comment: optimisticComment });
+    } else {
+      const optimisticReview: Review = {
+        id: Date.now(),
+        body: submittedText,
+        state: reviewType === "approve" ? "APPROVED" : "CHANGES_REQUESTED",
+        user: { login: user.login, avatar_url: user.avatar_url },
+        submitted_at: now,
+        commit_id: "",
+      };
+      onCommentSubmit({ type: "review", review: optimisticReview });
+    }
+
     try {
       const { GitHubAPI } = await import("../../services/github");
       const api = new GitHubAPI(token);
@@ -37,22 +79,21 @@ export function CommentForm({
           pr.base.repo.owner.login,
           pr.base.repo.name,
           pr.number,
-          commentText,
+          submittedText,
         );
       } else {
         await api.createReview(
           pr.base.repo.owner.login,
           pr.base.repo.name,
           pr.number,
-          commentText,
+          submittedText,
           reviewType === "approve" ? "APPROVE" : "REQUEST_CHANGES",
         );
       }
-
-      setCommentText("");
-      onCommentSubmit();
     } catch (error) {
       console.error("Failed to submit comment:", error);
+      // Restore text on error so user can retry
+      setCommentText(submittedText);
     } finally {
       setIsSubmitting(false);
     }
@@ -70,10 +111,17 @@ export function CommentForm({
         />
         <div className="flex-1">
           <textarea
+            ref={textareaRef}
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.metaKey && commentText.trim() && !isSubmitting) {
+                e.preventDefault();
+                handleSubmitComment();
+              }
+            }}
             className="input w-full h-32 resize-none mb-3"
-            placeholder="Leave a comment..."
+            placeholder="Leave a comment... (⌘↵ to submit)"
           />
 
           <div className="flex items-center justify-between">
@@ -138,4 +186,4 @@ export function CommentForm({
       </div>
     </div>
   );
-}
+});

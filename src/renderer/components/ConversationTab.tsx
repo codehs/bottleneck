@@ -1,3 +1,4 @@
+import { forwardRef, useRef, useImperativeHandle } from "react";
 import { PullRequest, Comment, Review } from "../services/github";
 import { useAuthStore } from "../stores/authStore";
 import { useUIStore } from "../stores/uiStore";
@@ -5,7 +6,7 @@ import { PRDescription } from "./conversation/PRDescription";
 import { BranchInfo } from "./conversation/BranchInfo";
 import { PRLabels } from "./conversation/PRLabels";
 import { TimelineItem } from "./conversation/TimelineItem";
-import { CommentForm } from "./conversation/CommentForm";
+import { CommentForm, CommentFormRef, CommentSubmitResult } from "./conversation/CommentForm";
 import { ParticipantsSidebar } from "./conversation/ParticipantsSidebar";
 import { useParticipantStats } from "./conversation/useParticipantStats";
 
@@ -13,17 +14,28 @@ interface ConversationTabProps {
   pr: PullRequest;
   comments: Comment[];
   reviews: Review[];
-  onCommentSubmit: () => void;
+  onCommentSubmit: (result: CommentSubmitResult) => void;
 }
 
-export function ConversationTab({
+export interface ConversationTabRef {
+  focusCommentForm: () => void;
+}
+
+export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabProps>(function ConversationTab({
   pr,
   comments,
   reviews,
   onCommentSubmit,
-}: ConversationTabProps) {
+}, ref) {
   const { user, token } = useAuthStore();
   const { theme } = useUIStore();
+  const commentFormRef = useRef<CommentFormRef>(null);
+
+  useImperativeHandle(ref, () => ({
+    focusCommentForm: () => {
+      commentFormRef.current?.focus();
+    },
+  }));
 
   // Calculate participant stats
   const participantStats = useParticipantStats(pr, comments, reviews);
@@ -85,6 +97,7 @@ export function ConversationTab({
 
           {/* Comment form */}
           <CommentForm
+            ref={commentFormRef}
             pr={pr}
             user={user}
             token={token}
@@ -98,4 +111,4 @@ export function ConversationTab({
       <ParticipantsSidebar participants={participantStats} theme={theme} />
     </div>
   );
-}
+});

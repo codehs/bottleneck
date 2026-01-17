@@ -147,6 +147,26 @@ export default function CommandPalette() {
     if (prMatch) {
       const [, owner, repo, prNumber] = prMatch;
       cmds.push({
+        id: "approve-pr",
+        name: "Approve PR",
+        keywords: "approve review lgtm",
+        shortcut: "⌘⇧A",
+        action: () => {
+          useUIStore.getState().triggerApprovePR();
+        },
+        preview: <div>Approve this pull request</div>,
+      });
+      cmds.push({
+        id: "focus-comment",
+        name: "Add Comment",
+        keywords: "comment write reply focus",
+        shortcut: "⌘⇧C",
+        action: () => {
+          useUIStore.getState().triggerFocusCommentBox();
+        },
+        preview: <div>Focus the comment box to add a comment</div>,
+      });
+      cmds.push({
         id: "copy-gh-checkout",
         name: "Copy gh pr checkout command",
         keywords: "git checkout gh pr copy clipboard",

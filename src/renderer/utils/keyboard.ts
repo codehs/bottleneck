@@ -73,6 +73,20 @@ export function setupKeyboardShortcuts() {
         useUIStore.getState().toggleWordWrap();
         return;
       }
+
+      // Approve PR (Cmd/Ctrl + Shift + A)
+      if ((e.key === "a" || e.key === "A") && e.shiftKey) {
+        e.preventDefault();
+        useUIStore.getState().triggerApprovePR();
+        return;
+      }
+
+      // Focus comment box (Cmd/Ctrl + Shift + C)
+      if ((e.key === "c" || e.key === "C") && e.shiftKey) {
+        e.preventDefault();
+        useUIStore.getState().triggerFocusCommentBox();
+        return;
+      }
     }
   };
 

@@ -53,6 +53,10 @@ interface UIState {
       | ((filters: UIState["prListFilters"]) => UIState["prListFilters"]),
   ) => void;
   resetPRListFilters: () => void;
+  
+  // PR action dispatchers - these emit events that PRDetailView listens to
+  triggerApprovePR: () => void;
+  triggerFocusCommentBox: () => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -136,6 +140,13 @@ export const useUIStore = create<UIState>()(
             selectedTeams: [],
           },
         }),
+      
+      triggerApprovePR: () => {
+        window.dispatchEvent(new CustomEvent("pr-action:approve"));
+      },
+      triggerFocusCommentBox: () => {
+        window.dispatchEvent(new CustomEvent("pr-action:focus-comment"));
+      },
     }),
     {
       name: "ui-storage",

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 
 import { useParams } from "react-router-dom";
 // Lazy load DiffEditor to avoid loading Monaco on app startup
 const DiffEditor = lazy(() => import("../components/DiffEditor").then(module => ({ default: module.DiffEditor })));
-import { ConversationTab } from "../components/ConversationTab";
+import { ConversationTab, ConversationTabRef } from "../components/ConversationTab";
 import { useAuthStore } from "../stores/authStore";
 import { usePRStore } from "../stores/prStore";
 import {
@@ -113,6 +113,30 @@ export default function PRDetailView() {
   } | null>(null);
   const [showRequestChangesModal, setShowRequestChangesModal] = useState(false);
   const [requestChangesFeedback, setRequestChangesFeedback] = useState("");
+  const conversationTabRef = useRef<ConversationTabRef>(null);
+
+  // Listen for PR action events from command palette
+  useEffect(() => {
+    const onApprove = () => {
+      // Trigger the approve handler - need to access it via ref pattern since it depends on state
+      window.dispatchEvent(new CustomEvent("pr-internal:do-approve"));
+    };
+    const onFocusComment = () => {
+      setActiveTab("conversation");
+      // Use setTimeout to ensure the tab switch completes before focusing
+      setTimeout(() => {
+        conversationTabRef.current?.focusCommentForm();
+      }, 50);
+    };
+
+    window.addEventListener("pr-action:approve", onApprove);
+    window.addEventListener("pr-action:focus-comment", onFocusComment);
+    
+    return () => {
+      window.removeEventListener("pr-action:approve", onApprove);
+      window.removeEventListener("pr-action:focus-comment", onFocusComment);
+    };
+  }, []);
 
   useEffect(() => {
     // Load data even without token if in dev mode
@@ -483,6 +507,17 @@ export default function PRDetailView() {
     }
   };
 
+  // Listen for internal approve event triggered by command palette
+  useEffect(() => {
+    const doApprove = () => {
+      handleApprove();
+    };
+    window.addEventListener("pr-internal:do-approve", doApprove);
+    return () => {
+      window.removeEventListener("pr-internal:do-approve", doApprove);
+    };
+  }, [pr, token, owner, repo, currentUser]);
+
   const handleRequestChanges = async () => {
     if (!pr || !token || !owner || !repo) return;
     setShowRequestChangesModal(true);
@@ -795,10 +830,17 @@ export default function PRDetailView() {
       <div className="flex-1 flex overflow-hidden">
         {activeTab === "conversation" && (
           <ConversationTab
+            ref={conversationTabRef}
             pr={pr}
             comments={comments}
             reviews={reviews}
-            onCommentSubmit={() => loadPRData()}
+            onCommentSubmit={(result) => {
+              if (result.type === "comment") {
+                setComments((prev) => [...prev, result.comment]);
+              } else {
+                setReviews((prev) => [...prev, result.review]);
+              }
+            }}
           />
         )}
         {activeTab === "files" && (
