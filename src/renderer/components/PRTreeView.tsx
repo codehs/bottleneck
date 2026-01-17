@@ -588,7 +588,7 @@ export function PRTreeView({
                                 return (
                                   <span
                                     key={label.name}
-                                    className="px-1.5 py-0.5 rounded text-[10px] font-medium opacity-80"
+                                    className="px-1 rounded text-[10px] font-medium opacity-80 leading-tight"
                                     style={{
                                       backgroundColor: labelColors.backgroundColor,
                                       color: labelColors.color,
