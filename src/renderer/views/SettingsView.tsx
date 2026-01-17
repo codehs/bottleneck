@@ -14,11 +14,13 @@ import {
   CheckCircle,
   XCircle,
   Users,
+  Star,
 } from "lucide-react";
 import { useAuthStore } from "../stores/authStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useUIStore } from "../stores/uiStore";
 import TeamManagementDialog from "../components/TeamManagementDialog";
+import { RepoFavoritesSection } from "../components/settings/RepoFavoritesSection";
 import { cn } from "../utils/cn";
 
 type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error';
@@ -28,7 +30,7 @@ export default function SettingsView() {
   const { settings, updateSettings, saveSettings, resetSettings, teams, loadTeams } = useSettingsStore();
   const { theme } = useUIStore();
   const [activeTab, setActiveTab] = useState<
-    "general" | "appearance" | "notifications" | "advanced" | "teams"
+    "general" | "appearance" | "notifications" | "advanced" | "teams" | "repositories"
   >("general");
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -197,6 +199,7 @@ export default function SettingsView() {
     { id: "general", label: "General", icon: Settings },
     { id: "appearance", label: "Appearance", icon: Palette },
     { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "repositories", label: "Repositories", icon: Star },
     { id: "teams", label: "Teams", icon: Users },
     { id: "advanced", label: "Advanced", icon: Code },
   ];
@@ -913,6 +916,12 @@ export default function SettingsView() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === "repositories" && (
+            <div className="space-y-6">
+              <RepoFavoritesSection />
             </div>
           )}
 

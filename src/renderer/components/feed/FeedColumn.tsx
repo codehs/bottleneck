@@ -12,11 +12,14 @@ interface FeedColumnProps {
 
 export function FeedColumn({ repoKey, onRemove }: FeedColumnProps) {
   const { theme } = useUIStore();
-  const { getActivitiesByRepo } = useActivityStore();
+  const { activities: allActivities } = useActivityStore();
 
   const activities = useMemo(() => {
-    return getActivitiesByRepo(repoKey);
-  }, [repoKey, getActivitiesByRepo]);
+    const [owner, name] = repoKey.split('/');
+    return allActivities
+      .filter((a) => a.repoOwner === owner && a.repo === name)
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }, [repoKey, allActivities]);
 
   const [owner, name] = repoKey.split('/');
 

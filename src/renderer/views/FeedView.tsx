@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePRStore } from "../stores/prStore";
 import { useActivityStore } from "../stores/activityStore";
+import { useRepoFavoritesStore } from "../stores/repoFavoritesStore";
 import { useUIStore } from "../stores/uiStore";
 import { cn } from "../utils/cn";
 import { FeedColumn } from "../components/feed/FeedColumn";
@@ -11,60 +12,53 @@ export default function FeedView() {
   const { pullRequests, repositories } = usePRStore();
   const { 
     generateActivitiesFromPRs, 
-    selectedRepos, 
-    setSelectedRepos,
-    loadSelectedRepos,
-    autoUpdate
   } = useActivityStore();
+  const { 
+    loadFavorites,
+    favorites,
+  } = useRepoFavoritesStore();
 
   const [displayedRepos, setDisplayedRepos] = useState<string[]>([]);
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Load saved repos on mount
+  // Load saved favorites on mount
   useEffect(() => {
     const initialize = async () => {
-      await loadSelectedRepos();
+      await loadFavorites();
       setIsInitializing(false);
     };
     initialize();
-  }, [loadSelectedRepos]);
+  }, [loadFavorites]);
 
   // Generate activities whenever PRs change
   useEffect(() => {
     generateActivitiesFromPRs(pullRequests);
   }, [pullRequests, generateActivitiesFromPRs]);
 
-  // Sync displayedRepos with selectedRepos from store
+  // Initialize with favorited repos, or first repo if none favorited
   useEffect(() => {
-    if (!isInitializing && selectedRepos.length > 0) {
-      setDisplayedRepos(selectedRepos);
+    if (!isInitializing && displayedRepos.length === 0) {
+      if (favorites.length > 0) {
+        // Use favorited repos (up to 4)
+        const favRepos = favorites.slice(0, 4).map((f) => f.repoKey);
+        setDisplayedRepos(favRepos);
+      } else if (repositories.length > 0) {
+        // Fallback to first repo
+        const firstRepo = `${repositories[0].owner}/${repositories[0].name}`;
+        setDisplayedRepos([firstRepo]);
+      }
     }
-  }, [selectedRepos, isInitializing]);
-
-  // Initialize with first repo if none saved
-  useEffect(() => {
-    if (!isInitializing && displayedRepos.length === 0 && repositories.length > 0) {
-      const firstRepo = `${repositories[0].owner}/${repositories[0].name}`;
-      const newRepos = [firstRepo];
-      setDisplayedRepos(newRepos);
-      setSelectedRepos(newRepos);
-    }
-  }, [repositories, displayedRepos.length, isInitializing, setSelectedRepos]);
+  }, [repositories, displayedRepos.length, isInitializing, favorites]);
 
   // Handle repo selection
   const handleToggleRepo = (repoKey: string) => {
     setDisplayedRepos((prev) => {
-      let newRepos: string[];
       if (prev.includes(repoKey)) {
-        newRepos = prev.filter((r) => r !== repoKey);
+        return prev.filter((r) => r !== repoKey);
       } else if (prev.length < 4) {
-        newRepos = [...prev, repoKey];
-      } else {
-        return prev;
+        return [...prev, repoKey];
       }
-      // Persist to store
-      setSelectedRepos(newRepos);
-      return newRepos;
+      return prev;
     });
   };
 
