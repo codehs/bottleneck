@@ -600,7 +600,7 @@ export function PRTreeView({
                                     }}
                                     title={label.name}
                                   >
-                                    {label.name.length > 12 ? `${label.name.slice(0, 12)}…` : label.name}
+                                    {label.name.length > 20 ? `${label.name.slice(0, 20)}…` : label.name}
                                   </span>
                                 );
                               })}
