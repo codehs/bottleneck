@@ -1,7 +1,7 @@
 import { useUIStore } from "../../stores/uiStore";
 import { cn } from "../../utils/cn";
-import { ChevronDown, Plus } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { ChevronDown, Plus, Search, X } from "lucide-react";
+import { useState, useRef, useEffect, useMemo } from "react";
 
 interface FeedControlsProps {
   displayedRepos: string[];
@@ -16,7 +16,9 @@ export function FeedControls({
 }: FeedControlsProps) {
   const { theme } = useUIStore();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -29,8 +31,27 @@ export function FeedControls({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Focus search input when dropdown opens
+  useEffect(() => {
+    if (showDropdown && searchInputRef.current) {
+      setTimeout(() => searchInputRef.current?.focus(), 0);
+    }
+  }, [showDropdown]);
+
+  // Filter repos based on search query
+  const filteredRepos = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return availableRepos;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return availableRepos.filter((repo) => {
+      return repo.toLowerCase().includes(query);
+    });
+  }, [availableRepos, searchQuery]);
+
   const canAddMore = displayedRepos.length < 4;
-  const availableToAdd = availableRepos.filter((r) => !displayedRepos.includes(r));
+  const availableToAdd = filteredRepos.filter((r) => !displayedRepos.includes(r));
 
   return (
     <div className={cn(
@@ -79,39 +100,80 @@ export function FeedControls({
           {showDropdown && (
             <div
               className={cn(
-                "absolute right-0 mt-2 w-56 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto",
+                "absolute right-0 mt-2 w-64 rounded-lg shadow-lg z-50 max-h-80 flex flex-col",
                 theme === "dark"
                   ? "bg-gray-700 border border-gray-600"
                   : "bg-white border border-gray-200"
               )}
             >
-              {availableToAdd.length === 0 ? (
+              {/* Search input */}
+              <div className="p-3 border-b sticky top-0" style={{
+                borderColor: theme === "dark" ? "#525252" : "#e5e7eb"
+              }}>
                 <div className={cn(
-                  "px-3 py-4 text-center text-sm",
-                  theme === "dark" ? "text-gray-400" : "text-gray-500"
+                  "flex items-center gap-2 px-3 py-2 rounded",
+                  theme === "dark"
+                    ? "bg-gray-600 border border-gray-500"
+                    : "bg-gray-50 border border-gray-300"
                 )}>
-                  All repositories selected
-                </div>
-              ) : (
-                availableToAdd.map((repo) => (
-                  <button
-                    key={repo}
-                    onClick={() => {
-                      onToggleRepo(repo);
-                      setShowDropdown(false);
-                    }}
+                  <Search size={16} className={theme === "dark" ? "text-gray-400" : "text-gray-500"} />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Search repos..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     className={cn(
-                      "w-full text-left px-3 py-2 text-sm transition-colors",
+                      "flex-1 bg-transparent outline-none text-sm",
                       theme === "dark"
-                        ? "hover:bg-gray-600 text-gray-200"
-                        : "hover:bg-gray-100"
+                        ? "text-gray-200 placeholder-gray-400"
+                        : "text-gray-900 placeholder-gray-500"
                     )}
-                  >
-                    <span className="text-xs opacity-75">{repo.split('/')[0]}/</span>
-                    {repo.split('/')[1]}
-                  </button>
-                ))
-              )}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className={cn(
+                        "p-1 rounded hover:bg-gray-400/20",
+                        theme === "dark" ? "text-gray-400" : "text-gray-600"
+                      )}
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Filtered repos list */}
+              <div className="flex-1 overflow-y-auto">
+                {availableToAdd.length === 0 ? (
+                  <div className={cn(
+                    "px-3 py-4 text-center text-sm",
+                    theme === "dark" ? "text-gray-400" : "text-gray-500"
+                  )}>
+                    {filteredRepos.length === 0 ? "No repositories found" : "All repositories selected"}
+                  </div>
+                ) : (
+                  availableToAdd.map((repo) => (
+                    <button
+                      key={repo}
+                      onClick={() => {
+                        onToggleRepo(repo);
+                        setShowDropdown(false);
+                      }}
+                      className={cn(
+                        "w-full text-left px-3 py-2 text-sm transition-colors",
+                        theme === "dark"
+                          ? "hover:bg-gray-600 text-gray-200"
+                          : "hover:bg-gray-100"
+                      )}
+                    >
+                      <span className="text-xs opacity-75">{repo.split('/')[0]}/</span>
+                      {repo.split('/')[1]}
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           )}
         </div>
