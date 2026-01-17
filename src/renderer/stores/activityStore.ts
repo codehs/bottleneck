@@ -49,11 +49,38 @@ interface ActivityState {
 
   // Actions
   setSelectedRepos: (repos: string[]) => void;
+  loadSelectedRepos: () => Promise<void>;
   toggleAutoUpdate: (enabled: boolean) => void;
   generateActivitiesFromPRs: (pullRequests: Map<string, PullRequest>) => void;
   getActivitiesByRepo: (repoKey: string) => Activity[];
   getAllActivities: () => Activity[];
 }
+
+// Load selected repos from electron store
+const loadSelectedReposFromStore = async (): Promise<string[]> => {
+  if (window.electron) {
+    try {
+      const result = await window.electron.settings.get("feedSelectedRepos");
+      if (result.success && result.value) {
+        return result.value as string[];
+      }
+    } catch (error) {
+      console.error("Failed to load feed selected repos:", error);
+    }
+  }
+  return [];
+};
+
+// Save selected repos to electron store
+const saveSelectedReposToStore = async (repos: string[]) => {
+  if (window.electron) {
+    try {
+      await window.electron.settings.set("feedSelectedRepos", repos);
+    } catch (error) {
+      console.error("Failed to save feed selected repos:", error);
+    }
+  }
+};
 
 export const useActivityStore = create<ActivityState>((set, get) => ({
   activities: [],
@@ -62,6 +89,13 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
   lastUpdate: null,
 
   setSelectedRepos: (repos: string[]) => {
+    set({ selectedRepos: repos });
+    // Save to persistent storage
+    saveSelectedReposToStore(repos);
+  },
+
+  loadSelectedRepos: async () => {
+    const repos = await loadSelectedReposFromStore();
     set({ selectedRepos: repos });
   },
 

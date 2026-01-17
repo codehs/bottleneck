@@ -13,33 +13,58 @@ export default function FeedView() {
     generateActivitiesFromPRs, 
     selectedRepos, 
     setSelectedRepos,
+    loadSelectedRepos,
     autoUpdate
   } = useActivityStore();
 
   const [displayedRepos, setDisplayedRepos] = useState<string[]>([]);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // Load saved repos on mount
+  useEffect(() => {
+    const initialize = async () => {
+      await loadSelectedRepos();
+      setIsInitializing(false);
+    };
+    initialize();
+  }, [loadSelectedRepos]);
 
   // Generate activities whenever PRs change
   useEffect(() => {
     generateActivitiesFromPRs(pullRequests);
   }, [pullRequests, generateActivitiesFromPRs]);
 
-  // Initialize with first repo if none selected
+  // Sync displayedRepos with selectedRepos from store
   useEffect(() => {
-    if (displayedRepos.length === 0 && repositories.length > 0) {
-      const firstRepo = `${repositories[0].owner}/${repositories[0].name}`;
-      setDisplayedRepos([firstRepo]);
+    if (!isInitializing && selectedRepos.length > 0) {
+      setDisplayedRepos(selectedRepos);
     }
-  }, [repositories, displayedRepos.length]);
+  }, [selectedRepos, isInitializing]);
+
+  // Initialize with first repo if none saved
+  useEffect(() => {
+    if (!isInitializing && displayedRepos.length === 0 && repositories.length > 0) {
+      const firstRepo = `${repositories[0].owner}/${repositories[0].name}`;
+      const newRepos = [firstRepo];
+      setDisplayedRepos(newRepos);
+      setSelectedRepos(newRepos);
+    }
+  }, [repositories, displayedRepos.length, isInitializing, setSelectedRepos]);
 
   // Handle repo selection
   const handleToggleRepo = (repoKey: string) => {
     setDisplayedRepos((prev) => {
+      let newRepos: string[];
       if (prev.includes(repoKey)) {
-        return prev.filter((r) => r !== repoKey);
+        newRepos = prev.filter((r) => r !== repoKey);
       } else if (prev.length < 4) {
-        return [...prev, repoKey];
+        newRepos = [...prev, repoKey];
+      } else {
+        return prev;
       }
-      return prev;
+      // Persist to store
+      setSelectedRepos(newRepos);
+      return newRepos;
     });
   };
 

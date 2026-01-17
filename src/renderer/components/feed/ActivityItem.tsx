@@ -1,4 +1,5 @@
 import { useUIStore } from "../../stores/uiStore";
+import { useNavigate } from "react-router-dom";
 import { cn } from "../../utils/cn";
 import { GitPullRequest, GitMerge, XCircle, MessageCircle, CheckCircle2 } from "lucide-react";
 import type { Activity } from "../../stores/activityStore";
@@ -7,8 +8,19 @@ interface ActivityItemProps {
   activity: Activity;
 }
 
+function canNavigateToPR(activity: Activity): boolean {
+  return activity.prNumber !== undefined;
+}
+
 export function ActivityItem({ activity }: ActivityItemProps) {
   const { theme } = useUIStore();
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    if (canNavigateToPR(activity)) {
+      navigate(`/pulls/${activity.repoOwner}/${activity.repo}/${activity.prNumber}`);
+    }
+  };
 
   function formatTime(date: Date): string {
     const now = new Date();
@@ -87,10 +99,16 @@ export function ActivityItem({ activity }: ActivityItemProps) {
   }
 
   return (
-    <div className={cn(
-      "px-4 py-3 hover:bg-gray-300/10 transition-colors",
-      theme === "dark" ? "hover:bg-gray-700/50" : ""
-    )}>
+    <div
+      onClick={handleClick}
+      className={cn(
+        "px-4 py-3 transition-colors",
+        canNavigateToPR(activity)
+          ? "cursor-pointer hover:bg-gray-300/10"
+          : "cursor-default hover:bg-gray-300/10",
+        theme === "dark" ? "hover:bg-gray-700/50" : ""
+      )}
+    >
       <div className="flex gap-3">
         {/* Icon */}
         <div className="flex-shrink-0 mt-0.5">
