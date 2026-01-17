@@ -86,12 +86,22 @@ const commands: Command[] = [
   {
     id: "nav-pull-requests",
     name: "Go to Pull Requests",
-    keywords: "navigate pulls pr",
+    keywords: "navigate pulls pr home",
     action: () => {
       const nav = window.__commandNavigate;
       if (nav) nav("/pulls");
     },
     preview: <div>Open Pull Request list</div>,
+  },
+  {
+    id: "nav-home",
+    name: "Home",
+    keywords: "home main start pulls",
+    action: () => {
+      const nav = window.__commandNavigate;
+      if (nav) nav("/pulls");
+    },
+    preview: <div>Go to the home page (Pull Requests)</div>,
   },
   {
     id: "nav-branches",
