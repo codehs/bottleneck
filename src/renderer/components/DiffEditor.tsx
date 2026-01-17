@@ -78,15 +78,16 @@ export function DiffEditor({
   const lastRenderedFileRef = useRef<string | null>(null);
 
   const hasFullContent = !(originalContent === undefined && modifiedContent === undefined);
-  const [showFullFile, setShowFullFile] = useState(hasFullContent);
+  const [showFullFile, setShowFullFile] = useState(false);
   const [diffEditorReady, setDiffEditorReady] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [hideUnchangedRegions, setHideUnchangedRegions] = useState(false);
   const [contentMismatch, setContentMismatch] = useState(false);
 
+  // Reset to diff view when switching files
   useEffect(() => {
-    setShowFullFile(hasFullContent);
-  }, [file.filename, hasFullContent]);
+    setShowFullFile(false);
+  }, [file.filename]);
 
   // Track if file changed while content was still loading
   useEffect(() => {
