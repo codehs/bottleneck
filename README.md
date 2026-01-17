@@ -76,11 +76,32 @@ npm install
 
 Important: You must use npm. Bun is known not to work.
 
-3. Run in development mode:
+3. Authenticate with GitHub:
+
+**Option A: Use GitHub CLI (recommended)**
+
+If you have `gh` installed and authenticated:
+
+```bash
+gh auth login  # If not already authenticated
+npm run dev    # Will auto-detect your gh token
+```
+
+**Option B: Use Personal Access Token**
+
+If you don't have `gh` installed, or prefer manual auth:
 
 ```bash
 npm run dev
 ```
+
+The app will prompt you to enter a GitHub Personal Access Token with the following required scopes:
+- `repo` (Full control of private repositories)
+- `read:org` (Read organization data)
+- `read:user` (Read user profile data)
+- `workflow` (Access workflows)
+
+You can create a token at: https://github.com/settings/tokens/new
 
 4. Build for production:
 
