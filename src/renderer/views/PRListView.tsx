@@ -52,7 +52,7 @@ export default function PRListView() {
     setPRListFilters,
   } = useUIStore();
   const { token } = useAuthStore();
-  const { teams, loadTeams } = useSettingsStore();
+  const { teams, loadTeams, addKnownAuthors } = useSettingsStore();
   const [showAuthorDropdown, setShowAuthorDropdown] = useState(false);
   const authorDropdownRef = useRef<HTMLDivElement>(null);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -109,10 +109,36 @@ export default function PRListView() {
     }
   }, [selectedRepoKey, currentRepoKey, loading, selectedRepo, fetchPullRequests]);
 
+  const authors = useMemo(() => {
+    const authorMap = new Map<string, { login: string; avatar_url: string }>();
+    pullRequests.forEach((pr) => {
+      authorMap.set(pr.user.login, pr.user);
+    });
+    return Array.from(authorMap.values());
+  }, [pullRequests]);
+
+  // Convert authors to TeamMember format for team dialog
+  const availableAuthors = useMemo((): TeamMember[] => {
+    return authors.map(author => ({
+      login: author.login,
+      avatar_url: author.avatar_url,
+    }));
+  }, [authors]);
+
   // Load teams on component mount
   useEffect(() => {
     loadTeams();
   }, [loadTeams]);
+
+  // Sync authors to known authors store when PRs are loaded
+  useEffect(() => {
+    if (availableAuthors.length > 0) {
+      addKnownAuthors(availableAuthors.map(author => ({
+        login: author.login,
+        avatar_url: author.avatar_url,
+      })));
+    }
+  }, [availableAuthors, addKnownAuthors]);
 
   const dataMatchesSelectedRepo = useMemo(() => {
     if (!selectedRepoKey) return false;
@@ -158,23 +184,6 @@ export default function PRListView() {
     },
     [selectedRepo, fetchPRDetails, bulkUpdatePRs],
   );
-
-
-  const authors = useMemo(() => {
-    const authorMap = new Map<string, { login: string; avatar_url: string }>();
-    pullRequests.forEach((pr) => {
-      authorMap.set(pr.user.login, pr.user);
-    });
-    return Array.from(authorMap.values());
-  }, [pullRequests]);
-
-  // Convert authors to TeamMember format for team dialog
-  const availableAuthors = useMemo((): TeamMember[] => {
-    return authors.map(author => ({
-      login: author.login,
-      avatar_url: author.avatar_url,
-    }));
-  }, [authors]);
 
   const handleAuthorToggle = useCallback(
     (authorLogin: string) => {
@@ -332,7 +341,6 @@ export default function PRListView() {
     teams,
     sortBy,
     selectedRepo,
-    getPRStatus,
   ]);
 
   // Apply search filter on top of other filters

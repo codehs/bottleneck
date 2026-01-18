@@ -15,6 +15,13 @@ export interface TeamMember {
   name?: string;
 }
 
+export interface KnownAuthor {
+  login: string;
+  avatar_url: string;
+  name?: string;
+  lastSeen?: string;
+}
+
 export interface CreateTeamData {
   name: string;
   description?: string;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Users, Edit2, Trash2, Save } from 'lucide-react';
+import { X, Plus, Users, Edit2, Trash2, Save, Minus } from 'lucide-react';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useUIStore } from '../stores/uiStore';
 import type { Team, CreateTeamData, TeamMember } from '../types/teams';
@@ -38,6 +38,8 @@ export default function TeamManagementDialog({ isOpen, onClose, availableAuthors
   const { teams, createTeam, updateTeam, deleteTeam } = useSettingsStore();
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [usernameInput, setUsernameInput] = useState('');
+  const [usernameError, setUsernameError] = useState('');
   const [formData, setFormData] = useState<CreateTeamData>({
     name: '',
     description: '',
@@ -61,6 +63,8 @@ export default function TeamManagementDialog({ isOpen, onClose, availableAuthors
   const handleClose = () => {
     setEditingTeam(null);
     setShowCreateForm(false);
+    setUsernameInput('');
+    setUsernameError('');
     setFormData({
       name: '',
       description: '',
@@ -98,6 +102,33 @@ export default function TeamManagementDialog({ isOpen, onClose, availableAuthors
       authorLogins: prev.authorLogins.includes(authorLogin)
         ? prev.authorLogins.filter(login => login !== authorLogin)
         : [...prev.authorLogins, authorLogin]
+    }));
+  };
+
+  const addMemberByUsername = () => {
+    const username = usernameInput.trim().toLowerCase();
+    if (!username) {
+      setUsernameError('Please enter a username');
+      return;
+    }
+
+    if (formData.authorLogins.includes(username)) {
+      setUsernameError('This member is already in the team');
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      authorLogins: [...prev.authorLogins, username]
+    }));
+    setUsernameInput('');
+    setUsernameError('');
+  };
+
+  const removeMember = (username: string) => {
+    setFormData(prev => ({
+      ...prev,
+      authorLogins: prev.authorLogins.filter(login => login !== username)
     }));
   };
 
@@ -303,30 +334,123 @@ export default function TeamManagementDialog({ isOpen, onClose, availableAuthors
                   {/* Team Members */}
                   <div>
                     <label className="block text-sm font-medium mb-2">Team Members</label>
-                    <div className="max-h-48 overflow-y-auto border rounded-lg p-2 space-y-1">
-                      {availableAuthors.map(author => (
-                        <label
-                          key={author.login}
+                    
+                    {/* Add Member by Username */}
+                    <div className="mb-4 space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={usernameInput}
+                          onChange={(e) => {
+                            setUsernameInput(e.target.value);
+                            setUsernameError('');
+                          }}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              addMemberByUsername();
+                            }
+                          }}
+                          placeholder="Enter GitHub username..."
                           className={cn(
-                            "flex items-center space-x-3 p-2 rounded cursor-pointer hover:bg-gray-50",
-                            theme === "dark" && "hover:bg-gray-700"
+                            "flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm",
+                            theme === "dark"
+                              ? "bg-gray-700 border-gray-600 text-white"
+                              : "bg-white border-gray-300"
                           )}
+                        />
+                        <button
+                          onClick={addMemberByUsername}
+                          className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-1 text-sm"
                         >
-                          <input
-                            type="checkbox"
-                            checked={formData.authorLogins.includes(author.login)}
-                            onChange={() => toggleAuthor(author.login)}
-                            className="rounded"
-                          />
-                          <img
-                            src={author.avatar_url}
-                            alt={author.login}
-                            className="w-6 h-6 rounded-full"
-                          />
-                          <span className="text-sm">{author.login}</span>
-                        </label>
-                      ))}
+                          <Plus className="w-4 h-4" />
+                          <span>Add</span>
+                        </button>
+                      </div>
+                      {usernameError && (
+                        <p className={cn(
+                          "text-sm",
+                          theme === "dark" ? "text-red-400" : "text-red-600"
+                        )}>{usernameError}</p>
+                      )}
                     </div>
+
+                    {/* Current Team Members */}
+                    <div className="space-y-2">
+                      {formData.authorLogins.length === 0 ? (
+                        <p className="text-sm text-gray-500 py-4 text-center">No members added yet</p>
+                      ) : (
+                        formData.authorLogins.map(login => {
+                          const author = availableAuthors.find(a => a.login === login);
+                          return (
+                            <div
+                              key={login}
+                              className={cn(
+                                "flex items-center justify-between p-3 rounded-lg border",
+                                theme === "dark"
+                                  ? "border-gray-700 hover:border-gray-600 hover:bg-gray-700"
+                                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                              )}
+                            >
+                              <div className="flex items-center space-x-3">
+                                {author && (
+                                  <img
+                                    src={author.avatar_url}
+                                    alt={login}
+                                    className="w-6 h-6 rounded-full"
+                                  />
+                                )}
+                                <span className="text-sm font-medium">{login}</span>
+                              </div>
+                              <button
+                                onClick={() => removeMember(login)}
+                                className={cn(
+                                  "p-1.5 rounded",
+                                  theme === "dark"
+                                    ? "text-red-400 hover:bg-red-900/30 hover:text-red-300"
+                                    : "text-red-600 hover:bg-red-100 hover:text-red-700"
+                                )}
+                                title="Remove member"
+                              >
+                                <Minus className="w-4 h-4" />
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Available Members Checklist */}
+                    {availableAuthors.length > 0 && (
+                      <div className="mt-6">
+                        <label className="block text-xs font-medium text-gray-600 mb-2">
+                          Quick Add from Known Authors
+                        </label>
+                        <div className="max-h-32 overflow-y-auto border rounded-lg p-2 space-y-1">
+                          {availableAuthors.map(author => (
+                            <label
+                              key={author.login}
+                              className={cn(
+                                "flex items-center space-x-3 p-2 rounded cursor-pointer hover:bg-gray-50",
+                                theme === "dark" && "hover:bg-gray-700"
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={formData.authorLogins.includes(author.login)}
+                                onChange={() => toggleAuthor(author.login)}
+                                className="rounded"
+                              />
+                              <img
+                                src={author.avatar_url}
+                                alt={author.login}
+                                className="w-5 h-5 rounded-full"
+                              />
+                              <span className="text-sm">{author.login}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}

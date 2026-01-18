@@ -15,6 +15,12 @@ import {
   XCircle,
   Users,
   Star,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  X,
+  UserPlus,
+  UserMinus,
 } from "lucide-react";
 import { useAuthStore } from "../stores/authStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -27,7 +33,18 @@ type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'downloa
 
 export default function SettingsView() {
   const { user, logout } = useAuthStore();
-  const { settings, updateSettings, saveSettings, resetSettings, teams, loadTeams } = useSettingsStore();
+  const { 
+    settings, 
+    updateSettings, 
+    saveSettings, 
+    resetSettings, 
+    teams, 
+    loadTeams,
+    knownAuthors,
+    loadKnownAuthors,
+    addMemberToTeam,
+    removeMemberFromTeam,
+  } = useSettingsStore();
   const { theme } = useUIStore();
   const [activeTab, setActiveTab] = useState<
     "general" | "appearance" | "notifications" | "advanced" | "teams" | "repositories"
@@ -44,9 +61,13 @@ export default function SettingsView() {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [isDev, setIsDev] = useState(false);
 
+  // State for expanded team editing
+  const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
+
   useEffect(() => {
-    // Load teams on component mount
+    // Load teams and known authors on component mount
     loadTeams();
+    loadKnownAuthors();
 
     // Get current version and dev status
     const initUpdater = async () => {
@@ -103,7 +124,7 @@ export default function SettingsView() {
     return () => {
       window.electron.updater.removeAllListeners();
     };
-  }, [loadTeams]);
+  }, [loadTeams, loadKnownAuthors]);
 
   const handleCheckForUpdates = async () => {
     try {
@@ -995,82 +1016,227 @@ export default function SettingsView() {
                     </button>
                   </div>
                 ) : (
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {teams.map(team => (
-                      <div
-                        key={team.id}
-                        className={cn(
-                          "p-4 rounded-lg border",
-                          theme === "dark"
-                            ? "bg-gray-800 border-gray-700 hover:border-gray-600"
-                            : "bg-white border-gray-200 hover:border-gray-300"
-                        )}
-                      >
-                        <div className="flex items-start space-x-3">
+                  <div className="space-y-4">
+                    {teams.map(team => {
+                      const isExpanded = expandedTeamId === team.id;
+                      const membersNotInTeam = knownAuthors.filter(
+                        author => !team.authorLogins.includes(author.login)
+                      );
+                      
+                      return (
+                        <div
+                          key={team.id}
+                          className={cn(
+                            "rounded-lg border overflow-hidden",
+                            theme === "dark"
+                              ? "bg-gray-800 border-gray-700"
+                              : "bg-white border-gray-200"
+                          )}
+                        >
+                          {/* Team Header */}
                           <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg flex-shrink-0"
-                            style={{ backgroundColor: team.color }}
+                            className={cn(
+                              "p-4 cursor-pointer",
+                              theme === "dark" ? "hover:bg-gray-750" : "hover:bg-gray-50"
+                            )}
+                            onClick={() => setExpandedTeamId(isExpanded ? null : team.id)}
                           >
-                            {team.icon}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div
+                                  className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg flex-shrink-0"
+                                  style={{ backgroundColor: team.color }}
+                                >
+                                  {team.icon}
+                                </div>
+                                <div>
+                                  <h3
+                                    className={cn(
+                                      "font-medium",
+                                      theme === "dark" ? "text-white" : "text-gray-900",
+                                    )}
+                                  >
+                                    {team.name}
+                                  </h3>
+                                  <p
+                                    className={cn(
+                                      "text-sm",
+                                      theme === "dark" ? "text-gray-400" : "text-gray-600",
+                                    )}
+                                  >
+                                    {team.authorLogins.length} member{team.authorLogins.length !== 1 ? 's' : ''}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowTeamDialog(true);
+                                  }}
+                                  className={cn(
+                                    "px-3 py-1 text-sm rounded-lg",
+                                    theme === "dark"
+                                      ? "bg-gray-700 hover:bg-gray-600 text-gray-300"
+                                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                                  )}
+                                >
+                                  Edit
+                                </button>
+                                {isExpanded ? (
+                                  <ChevronUp className="w-5 h-5 text-gray-400" />
+                                ) : (
+                                  <ChevronDown className="w-5 h-5 text-gray-400" />
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h3
-                              className={cn(
-                                "font-medium truncate",
-                                theme === "dark" ? "text-white" : "text-gray-900",
-                              )}
-                            >
-                              {team.name}
-                            </h3>
-                            {team.description && (
+
+                          {/* Expanded Member Management */}
+                          {isExpanded && (
+                            <div className={cn(
+                              "border-t p-4",
+                              theme === "dark" ? "border-gray-700" : "border-gray-200"
+                            )}>
+                              {/* Current Members */}
+                              <div className="mb-4">
+                                <h4
+                                  className={cn(
+                                    "text-sm font-medium mb-2 flex items-center",
+                                    theme === "dark" ? "text-gray-300" : "text-gray-700"
+                                  )}
+                                >
+                                  <Users className="w-4 h-4 mr-2" />
+                                  Current Members
+                                </h4>
+                                {team.authorLogins.length === 0 ? (
+                                  <p
+                                    className={cn(
+                                      "text-sm italic",
+                                      theme === "dark" ? "text-gray-500" : "text-gray-400"
+                                    )}
+                                  >
+                                    No members yet. Add members from the list below.
+                                  </p>
+                                ) : (
+                                  <div className="flex flex-wrap gap-2">
+                                    {team.authorLogins.map(login => {
+                                      const author = knownAuthors.find(a => a.login === login);
+                                      return (
+                                        <div
+                                          key={login}
+                                          className={cn(
+                                            "flex items-center space-x-2 px-3 py-1.5 rounded-full group",
+                                            theme === "dark"
+                                              ? "bg-gray-700"
+                                              : "bg-gray-100"
+                                          )}
+                                        >
+                                          {author?.avatar_url && (
+                                            <img
+                                              src={author.avatar_url}
+                                              alt={login}
+                                              className="w-5 h-5 rounded-full"
+                                            />
+                                          )}
+                                          <span
+                                            className={cn(
+                                              "text-sm",
+                                              theme === "dark" ? "text-gray-300" : "text-gray-700"
+                                            )}
+                                          >
+                                            {login}
+                                          </span>
+                                          <button
+                                            onClick={() => removeMemberFromTeam(team.id, login)}
+                                            className={cn(
+                                              "p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity",
+                                              theme === "dark"
+                                                ? "hover:bg-gray-600 text-gray-400 hover:text-red-400"
+                                                : "hover:bg-gray-200 text-gray-500 hover:text-red-600"
+                                            )}
+                                            title="Remove from team"
+                                          >
+                                            <X className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Available Authors to Add */}
+                              <div>
+                                <h4
+                                  className={cn(
+                                    "text-sm font-medium mb-2 flex items-center",
+                                    theme === "dark" ? "text-gray-300" : "text-gray-700"
+                                  )}
+                                >
+                                  <UserPlus className="w-4 h-4 mr-2" />
+                                  Add Members
+                                </h4>
+                                {membersNotInTeam.length === 0 ? (
+                                  <p
+                                    className={cn(
+                                      "text-sm italic",
+                                      theme === "dark" ? "text-gray-500" : "text-gray-400"
+                                    )}
+                                  >
+                                    {knownAuthors.length === 0
+                                      ? "No authors available. View PRs to discover authors."
+                                      : "All known authors are already in this team."}
+                                  </p>
+                                ) : (
+                                  <div className="flex flex-wrap gap-2">
+                                    {membersNotInTeam.map(author => (
+                                      <button
+                                        key={author.login}
+                                        onClick={() => addMemberToTeam(team.id, author.login)}
+                                        className={cn(
+                                          "flex items-center space-x-2 px-3 py-1.5 rounded-full border border-dashed transition-colors",
+                                          theme === "dark"
+                                            ? "border-gray-600 hover:border-gray-500 hover:bg-gray-700"
+                                            : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+                                        )}
+                                        title="Add to team"
+                                      >
+                                        {author.avatar_url && (
+                                          <img
+                                            src={author.avatar_url}
+                                            alt={author.login}
+                                            className="w-5 h-5 rounded-full"
+                                          />
+                                        )}
+                                        <span
+                                          className={cn(
+                                            "text-sm",
+                                            theme === "dark" ? "text-gray-400" : "text-gray-600"
+                                          )}
+                                        >
+                                          {author.login}
+                                        </span>
+                                        <Plus className="w-3.5 h-3.5" />
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
                               <p
                                 className={cn(
-                                  "text-sm mt-1 truncate",
-                                  theme === "dark" ? "text-gray-400" : "text-gray-600",
+                                  "text-xs mt-4 italic",
+                                  theme === "dark" ? "text-gray-500" : "text-gray-400"
                                 )}
                               >
-                                {team.description}
+                                Note: Users can be on multiple teams. Authors are discovered when you view PRs.
                               </p>
-                            )}
-                            <p
-                              className={cn(
-                                "text-xs mt-2",
-                                theme === "dark" ? "text-gray-500" : "text-gray-500",
-                              )}
-                            >
-                              {team.authorLogins.length} member{team.authorLogins.length !== 1 ? 's' : ''}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-1">
-                          {team.authorLogins.slice(0, 3).map(login => (
-                            <span
-                              key={login}
-                              className={cn(
-                                "px-2 py-1 text-xs rounded-full",
-                                theme === "dark"
-                                  ? "bg-gray-700 text-gray-300"
-                                  : "bg-gray-100 text-gray-700"
-                              )}
-                            >
-                              {login}
-                            </span>
-                          ))}
-                          {team.authorLogins.length > 3 && (
-                            <span
-                              className={cn(
-                                "px-2 py-1 text-xs rounded-full",
-                                theme === "dark"
-                                  ? "bg-gray-700 text-gray-300"
-                                  : "bg-gray-100 text-gray-700"
-                              )}
-                            >
-                              +{team.authorLogins.length - 3} more
-                            </span>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1327,7 +1493,7 @@ export default function SettingsView() {
       <TeamManagementDialog
         isOpen={showTeamDialog}
         onClose={() => setShowTeamDialog(false)}
-        availableAuthors={[]} // Empty array since we don't have PR authors in settings
+        availableAuthors={knownAuthors.map(a => ({ login: a.login, avatar_url: a.avatar_url }))}
       />
     </div>
   );

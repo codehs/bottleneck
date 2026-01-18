@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Team, CreateTeamData, UpdateTeamData } from "../types/teams";
+import type { Team, CreateTeamData, UpdateTeamData, KnownAuthor } from "../types/teams";
 
 interface Settings {
   // General
@@ -33,6 +33,7 @@ interface Settings {
 interface SettingsState {
   settings: Settings;
   teams: Team[];
+  knownAuthors: KnownAuthor[];
   updateSettings: (newSettings: Partial<Settings>) => void;
   loadSettings: () => Promise<void>;
   saveSettings: () => Promise<void>;
@@ -46,6 +47,17 @@ interface SettingsState {
   getAllTeams: () => Team[];
   saveTeams: () => Promise<void>;
   loadTeams: () => Promise<void>;
+  
+  // Author management
+  addKnownAuthors: (authors: KnownAuthor[]) => void;
+  removeKnownAuthor: (login: string) => void;
+  getKnownAuthors: () => KnownAuthor[];
+  saveKnownAuthors: () => Promise<void>;
+  loadKnownAuthors: () => Promise<void>;
+  
+  // Team member management
+  addMemberToTeam: (teamId: string, authorLogin: string) => Team | null;
+  removeMemberFromTeam: (teamId: string, authorLogin: string) => Team | null;
 }
 
 const defaultSettings: Settings = {
@@ -81,6 +93,7 @@ export const useSettingsStore = create<SettingsState>()(
     (set, get) => ({
       settings: defaultSettings,
       teams: [],
+      knownAuthors: [],
 
       updateSettings: (newSettings: Partial<Settings>) => {
         set((state) => ({
@@ -204,12 +217,97 @@ export const useSettingsStore = create<SettingsState>()(
       console.error("Failed to load teams:", error);
     }
   },
+
+  // Known authors management
+  addKnownAuthors: (authors: KnownAuthor[]) => {
+    const now = new Date().toISOString();
+    set((state) => {
+      const existingMap = new Map(state.knownAuthors.map(a => [a.login, a]));
+      authors.forEach(author => {
+        existingMap.set(author.login, {
+          ...author,
+          lastSeen: now,
+        });
+      });
+      return { knownAuthors: Array.from(existingMap.values()) };
+    });
+    get().saveKnownAuthors();
+  },
+
+  removeKnownAuthor: (login: string) => {
+    set((state) => ({
+      knownAuthors: state.knownAuthors.filter(a => a.login !== login),
+    }));
+    get().saveKnownAuthors();
+  },
+
+  getKnownAuthors: () => {
+    return get().knownAuthors;
+  },
+
+  saveKnownAuthors: async () => {
+    try {
+      if (window.electron?.settings) {
+        const knownAuthors = get().knownAuthors;
+        await window.electron.settings.set('knownAuthors', knownAuthors);
+      }
+    } catch (error) {
+      console.error("Failed to save known authors:", error);
+    }
+  },
+
+  loadKnownAuthors: async () => {
+    try {
+      if (window.electron?.settings) {
+        const result = await window.electron.settings.get('knownAuthors');
+        if (result.success && result.value) {
+          set({ knownAuthors: result.value });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load known authors:", error);
+    }
+  },
+
+  // Team member management
+  addMemberToTeam: (teamId: string, authorLogin: string) => {
+    const now = new Date().toISOString();
+    set((state) => ({
+      teams: state.teams.map(team =>
+        team.id === teamId && !team.authorLogins.includes(authorLogin)
+          ? { ...team, authorLogins: [...team.authorLogins, authorLogin], updatedAt: now }
+          : team
+      ),
+    }));
+    const updatedTeam = get().teams.find(team => team.id === teamId);
+    if (updatedTeam) {
+      get().saveTeams();
+    }
+    return updatedTeam || null;
+  },
+
+  removeMemberFromTeam: (teamId: string, authorLogin: string) => {
+    const now = new Date().toISOString();
+    set((state) => ({
+      teams: state.teams.map(team =>
+        team.id === teamId
+          ? { ...team, authorLogins: team.authorLogins.filter(login => login !== authorLogin), updatedAt: now }
+          : team
+      ),
+    }));
+    const updatedTeam = get().teams.find(team => team.id === teamId);
+    if (updatedTeam) {
+      get().saveTeams();
+    }
+    return updatedTeam || null;
+  },
 }),
     {
       name: "settings-storage",
       partialize: (state) => ({
         settings: state.settings,
         teams: state.teams,
+        knownAuthors: state.knownAuthors,
       }),
     }
   )
