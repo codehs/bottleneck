@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { usePRStore } from "../stores/prStore";
 import { useActivityStore } from "../stores/activityStore";
 import { useUIStore } from "../stores/uiStore";
+import { useAuthStore } from "../stores/authStore";
 import { cn } from "../utils/cn";
 import { FeedColumn } from "../components/feed/FeedColumn";
 
@@ -9,11 +10,12 @@ export default function FeedView() {
   const { theme } = useUIStore();
   const { pullRequests, selectedRepo } = usePRStore();
   const { generateActivitiesFromPRs } = useActivityStore();
+  const { user } = useAuthStore();
 
   // Generate activities whenever PRs change
   useEffect(() => {
-    generateActivitiesFromPRs(pullRequests);
-  }, [pullRequests, generateActivitiesFromPRs]);
+    generateActivitiesFromPRs(pullRequests, user?.login);
+  }, [pullRequests, generateActivitiesFromPRs, user?.login]);
 
   const repoKey = useMemo(() => {
     if (!selectedRepo) return null;

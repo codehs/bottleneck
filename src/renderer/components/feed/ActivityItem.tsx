@@ -50,6 +50,7 @@ export function ActivityItem({ activity }: ActivityItemProps) {
           ? <CheckCircle2 size={16} className="text-green-500" />
           : <MessageCircle size={16} className="text-yellow-500" />;
       case 'comment':
+      case 'pr_comment':
         return <MessageCircle size={16} className="text-blue-500" />;
       case 'commit':
         return <GitPullRequest size={16} className="text-gray-500" />;
@@ -70,6 +71,13 @@ export function ActivityItem({ activity }: ActivityItemProps) {
         return activity.reviewState === 'APPROVED' ? 'Approved' : 'Requested changes';
       case 'comment':
         return 'Commented';
+      case 'pr_comment':
+        if (activity.isCommentMention) {
+          return 'Mentioned in comments';
+        } else if (activity.isAssignedPR) {
+          return 'Comments on assigned PR';
+        }
+        return 'Comments';
       case 'commit':
         return 'Committed';
       default:
@@ -90,6 +98,7 @@ export function ActivityItem({ activity }: ActivityItemProps) {
           ? (theme === "dark" ? 'text-green-400' : 'text-green-600')
           : (theme === "dark" ? 'text-yellow-400' : 'text-yellow-600');
       case 'comment':
+      case 'pr_comment':
         return theme === "dark" ? 'text-blue-400' : 'text-blue-600';
       case 'commit':
         return theme === "dark" ? 'text-gray-400' : 'text-gray-600';

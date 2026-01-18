@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { PullRequest } from "../services/github";
 
-export type ActivityType = 'pr_opened' | 'pr_merged' | 'pr_closed' | 'comment' | 'review' | 'commit';
+export type ActivityType = 'pr_opened' | 'pr_merged' | 'pr_closed' | 'comment' | 'review' | 'commit' | 'pr_comment';
 
 export interface Activity {
   id: string;
@@ -39,6 +39,11 @@ export interface Activity {
     name: string;
     email: string;
   };
+  
+  // PR comment activity
+  isCommentMention?: boolean;
+  isAssignedPR?: boolean;
+  isFollowedPR?: boolean;
 }
 
 interface ActivityState {
@@ -51,7 +56,7 @@ interface ActivityState {
   setSelectedRepos: (repos: string[]) => void;
   loadSelectedRepos: () => Promise<void>;
   toggleAutoUpdate: (enabled: boolean) => void;
-  generateActivitiesFromPRs: (pullRequests: Map<string, PullRequest>) => void;
+  generateActivitiesFromPRs: (pullRequests: Map<string, PullRequest>, currentUserLogin?: string) => void;
   getActivitiesByRepo: (repoKey: string) => Activity[];
   getAllActivities: () => Activity[];
 }
@@ -103,11 +108,18 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
     set({ autoUpdate: enabled });
   },
 
-  generateActivitiesFromPRs: (pullRequests: Map<string, PullRequest>) => {
+  generateActivitiesFromPRs: (pullRequests: Map<string, PullRequest>, currentUserLogin?: string) => {
     const activities: Activity[] = [];
 
     pullRequests.forEach((pr) => {
-      const repoKey = `${pr.base.repo.owner.login}/${pr.base.repo.name}`;
+      // Check if user is assigned to this PR
+      const isUserAssigned = currentUserLogin ? pr.assignees.some(a => a.login === currentUserLogin) : false;
+      
+      // Check if user is mentioned in PR body or requested for review
+      const isUserMentioned = currentUserLogin ? (
+        pr.body?.includes(`@${currentUserLogin}`) ||
+        pr.requested_reviewers.some(r => r.login === currentUserLogin)
+      ) : false;
 
       // PR opened activity
       activities.push({
@@ -179,6 +191,22 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
             reviewState: 'CHANGES_REQUESTED',
             reviewer,
           });
+        });
+      }
+      
+      // Comment activity for PRs user is assigned to or mentioned in
+      if ((isUserAssigned || isUserMentioned) && pr.comments > 0) {
+        activities.push({
+          id: `pr-comment-${pr.id}`,
+          type: 'pr_comment',
+          timestamp: new Date(pr.updated_at),
+          repo: pr.base.repo.name,
+          repoOwner: pr.base.repo.owner.login,
+          prNumber: pr.number,
+          prTitle: pr.title,
+          commentAuthor: pr.user,
+          isAssignedPR: isUserAssigned,
+          isCommentMention: isUserMentioned,
         });
       }
     });
