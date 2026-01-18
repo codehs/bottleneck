@@ -11,12 +11,24 @@ import { StatsFiltersBar } from "../components/stats/StatsFiltersBar";
 
 export default function StatsView() {
   const { theme } = useUIStore();
-  const { pullRequests, repositories } = usePRStore();
+  const { pullRequests, selectedRepo } = usePRStore();
   const { calculateStats, filters, setTimeRange, setSelectedRepos, getFilteredStats } = useStatsStore();
+  const selectedRepoKey = useMemo(() => {
+    if (!selectedRepo) return null;
+    return `${selectedRepo.owner}/${selectedRepo.name}`;
+  }, [selectedRepo]);
 
   useEffect(() => {
     calculateStats(pullRequests);
-  }, [pullRequests, filters.timeRange, calculateStats]);
+  }, [pullRequests, filters.timeRange, filters.selectedRepos, calculateStats]);
+
+  useEffect(() => {
+    if (selectedRepoKey) {
+      setSelectedRepos([selectedRepoKey]);
+    } else {
+      setSelectedRepos([]);
+    }
+  }, [selectedRepoKey, setSelectedRepos]);
 
   const filteredStats = useMemo(() => {
     return getFilteredStats();
@@ -39,33 +51,47 @@ export default function StatsView() {
             "mt-2",
             theme === "dark" ? "text-gray-400" : "text-gray-600"
           )}>
-            Comprehensive metrics and insights across your repositories
+            {selectedRepo
+              ? `Insights for ${selectedRepo.full_name ?? `${selectedRepo.owner}/${selectedRepo.name}`}`
+              : "Select a repository to view metrics"}
           </p>
         </div>
 
         {/* Filters */}
         <StatsFiltersBar
           timeRange={filters.timeRange}
-          selectedRepos={filters.selectedRepos}
-          availableRepos={repositories}
           onTimeRangeChange={setTimeRange}
-          onReposChange={setSelectedRepos}
         />
 
-        {/* Overview Cards */}
-        <StatsOverview stats={filteredStats} />
+        {selectedRepo ? (
+          <>
+            {/* Overview Cards */}
+            <StatsOverview stats={filteredStats} />
 
-        {/* Main Stats Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Repository Stats */}
-          <RepoStatsSection repos={filteredStats.repos} />
+            {/* Main Stats Sections */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Repository Stats */}
+              <RepoStatsSection repos={filteredStats.repos} />
 
-          {/* Reviewer Stats */}
-          <ReviewerStatsSection reviewers={filteredStats.reviewers} />
-        </div>
+              {/* Reviewer Stats */}
+              <ReviewerStatsSection reviewers={filteredStats.reviewers} />
+            </div>
 
-        {/* Person Stats - Full Width */}
-        <PersonStatsSection people={filteredStats.people} />
+            {/* Person Stats - Full Width */}
+            <PersonStatsSection people={filteredStats.people} />
+          </>
+        ) : (
+          <div
+            className={cn(
+              "rounded-lg border border-dashed p-10 text-center",
+              theme === "dark"
+                ? "border-gray-700 text-gray-400"
+                : "border-gray-200 text-gray-500"
+            )}
+          >
+            Choose a repository from the top bar to see stats.
+          </div>
+        )}
       </div>
     </div>
   );

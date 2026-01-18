@@ -76,18 +76,22 @@ export const useStatsStore = create<StatsState>((set, get) => ({
     const reviewerMap = new Map<string, ReviewerStats>();
 
     const now = new Date();
-    const timeRange = get().filters.timeRange;
+    const { timeRange, selectedRepos } = get().filters;
     const filterDateMs = getFilterDate(now, timeRange).getTime();
 
     pullRequests.forEach((pr) => {
       const createdAt = new Date(pr.created_at).getTime();
+      const repoKey = `${pr.base.repo.owner.login}/${pr.base.repo.name}`;
       
       // Skip PRs outside time range
       if (createdAt < filterDateMs) {
         return;
       }
 
-      const repoKey = `${pr.base.repo.owner.login}/${pr.base.repo.name}`;
+      if (selectedRepos.length > 0 && !selectedRepos.includes(repoKey)) {
+        return;
+      }
+
       const authorName = pr.user.login;
 
       // Update repo stats
