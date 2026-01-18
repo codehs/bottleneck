@@ -8,7 +8,7 @@ import { ActivityItem } from "./ActivityItem";
 
 interface FeedColumnProps {
   repoKey: string;
-  onRemove: () => void;
+  onRemove?: () => void;
 }
 
 export function FeedColumn({ repoKey, onRemove }: FeedColumnProps) {
@@ -72,15 +72,17 @@ export function FeedColumn({ repoKey, onRemove }: FeedColumnProps) {
           >
             <RefreshCw size={16} className={isReloading ? "animate-spin" : ""} />
           </button>
-          <button
-            onClick={onRemove}
-            className={cn(
-              "p-1.5 rounded hover:bg-gray-300/20 transition-colors",
-              theme === "dark" ? "text-gray-400" : "text-gray-600"
-            )}
-          >
-            <X size={16} />
-          </button>
+          {onRemove && (
+            <button
+              onClick={onRemove}
+              className={cn(
+                "p-1.5 rounded hover:bg-gray-300/20 transition-colors",
+                theme === "dark" ? "text-gray-400" : "text-gray-600"
+              )}
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
       </div>
 
