@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, X, GitPullRequest, GitPullRequestDraft } from "lucide-react";
+import { Search, X, GitPullRequest, GitPullRequestDraft, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
 import { useSyncStore } from "../stores/syncStore";
@@ -7,6 +7,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { usePRStore } from "../stores/prStore";
 import { useRepoFavoritesStore } from "../stores/repoFavoritesStore";
 import { getPRIcon, getPRColorClass } from "../utils/prStatus";
+import { extractAllURLsFromPR } from "../utils/urlParser";
 
 interface Command {
   id: string;
@@ -16,6 +17,7 @@ interface Command {
   section?: string;
   action: () => void;
   preview?: React.ReactNode;
+  icon?: React.ComponentType<{ className?: string }>;
 }
 
 function formatRelativeTime(date: string): string {
@@ -183,25 +185,47 @@ const commands: Command[] = [
 ];
 
 export default function CommandPalette() {
-  const { commandPaletteOpen, toggleCommandPalette, currentPage } = useUIStore();
-  const { pullRequests, repositories, setSelectedRepo } = usePRStore();
-  const { favorites, loadFavorites } = useRepoFavoritesStore();
-  const navigate = useNavigate();
-  const location = useLocation();
-  // Load favorites and expose navigate
-  useEffect(() => {
-    loadFavorites();
-    ((window as any).__commandNavigate) = navigate;
-    ((window as any).__commandSetSelectedRepo) = setSelectedRepo;
-    return () => {
-      delete (window as any).__commandNavigate;
-      delete (window as any).__commandSetSelectedRepo;
-    };
-  }, [navigate, loadFavorites, setSelectedRepo]);
+   const { commandPaletteOpen, toggleCommandPalette, currentPage } = useUIStore();
+   const { pullRequests, repositories, setSelectedRepo } = usePRStore();
+   const { favorites, loadFavorites } = useRepoFavoritesStore();
+   const navigate = useNavigate();
+   const location = useLocation();
+   // Load favorites and expose navigate
+   useEffect(() => {
+     loadFavorites();
+     ((window as any).__commandNavigate) = navigate;
+     ((window as any).__commandSetSelectedRepo) = setSelectedRepo;
+     
+     // Listen for trigger to open URL mode
+     const handleTriggerURLMode = (e: Event) => {
+       const customEvent = e as CustomEvent;
+       const pr = customEvent.detail?.pr;
+       if (pr) {
+         setPRForURLs(pr);
+         setIsURLMode(true);
+         setQuery("");
+         setSelectedIndex(0);
+         // Make sure command palette is open
+         if (!commandPaletteOpen) {
+           toggleCommandPalette();
+         }
+       }
+     };
+     
+     window.addEventListener("pr-action:trigger-url-mode", handleTriggerURLMode);
+     
+     return () => {
+       delete (window as any).__commandNavigate;
+       delete (window as any).__commandSetSelectedRepo;
+       window.removeEventListener("pr-action:trigger-url-mode", handleTriggerURLMode);
+     };
+   }, [navigate, loadFavorites, setSelectedRepo, commandPaletteOpen, toggleCommandPalette]);
 
-  const [query, setQuery] = useState("");
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [isPreviewKey, setIsPreviewKey] = useState(false);
+   const [query, setQuery] = useState("");
+   const [selectedIndex, setSelectedIndex] = useState(0);
+   const [isPreviewKey, setIsPreviewKey] = useState(false);
+   const [isURLMode, setIsURLMode] = useState(false);
+   const [prForURLs, setPRForURLs] = useState<any>(null);
 
   const contextualCommands = useMemo(() => {
     const cmds: Command[] = [];
@@ -246,6 +270,24 @@ export default function CommandPalette() {
           window.open(`https://github.com/${owner}/${repo}/pull/${prNumber}`, '_blank');
         },
         preview: <div>Open this pull request on GitHub</div>,
+      });
+      cmds.push({
+        id: "open-urls",
+        name: "Open URLs from PR",
+        keywords: "open url link browser external",
+        shortcut: "⌘O",
+        action: () => {
+          // Find the PR in the store
+          const prKey = `${owner}/${repo}#${prNumber}`;
+          const pr = pullRequests.get(prKey);
+          if (pr) {
+            setPRForURLs(pr);
+            setIsURLMode(true);
+            setQuery("");
+            setSelectedIndex(0);
+          }
+        },
+        preview: <div>Open a command palette with URLs from this PR</div>,
       });
       cmds.push({
         id: "open-pr-graphite",
@@ -342,15 +384,154 @@ export default function CommandPalette() {
     })) as Command[];
   }, [pullRequests, navigate]);
 
+  // Generate URL commands when in URL mode
+   const urlCommands = useMemo(() => {
+     if (!isURLMode || !prForURLs) return [];
+     
+     // Get comments and reviews from the PR lookup map if available
+     // For now, we'll just extract from the body since comments/reviews aren't passed
+     const urls = extractAllURLsFromPR(
+       prForURLs.body,
+       [], // Comments would need to be passed in separately
+       []  // Reviews would need to be passed in separately
+     );
+     
+     // Categorize URLs by domain
+     const testing: typeof urls = [];
+     const production: typeof urls = [];
+     const featureFlags: typeof urls = [];
+     const loom: typeof urls = [];
+     const other: typeof urls = [];
+     
+     urls.forEach((url) => {
+       const urlLower = url.url.toLowerCase();
+       if (urlLower.includes('internal/feature_flag')) {
+         featureFlags.push(url);
+       } else if (urlLower.includes('localhost') || urlLower.includes('.dev.codehs.com') || urlLower.includes('staging') || urlLower.includes('stage')) {
+         testing.push(url);
+       } else if (urlLower.includes('codehs.com')) {
+         production.push(url);
+       } else if (urlLower.includes('loom.com')) {
+         loom.push(url);
+       } else {
+         other.push(url);
+       }
+     });
+     
+     // Sort each section alphabetically
+     testing.sort((a, b) => a.url.toLowerCase().localeCompare(b.url.toLowerCase()));
+     production.sort((a, b) => a.url.toLowerCase().localeCompare(b.url.toLowerCase()));
+     featureFlags.sort((a, b) => a.url.toLowerCase().localeCompare(b.url.toLowerCase()));
+     loom.sort((a, b) => a.url.toLowerCase().localeCompare(b.url.toLowerCase()));
+     other.sort((a, b) => a.url.toLowerCase().localeCompare(b.url.toLowerCase()));
+     
+     const cmds: Command[] = [
+       {
+         id: "url-mode-pr-github",
+         name: "Open PR on GitHub",
+         keywords: "github open browser external link",
+         section: "PR",
+         icon: Github,
+         action: () => {
+           window.open(`https://github.com/${prForURLs.base.repo.owner.login}/${prForURLs.base.repo.name}/pull/${prForURLs.number}`, '_blank');
+           setIsURLMode(false);
+         },
+         preview: <div>Open this pull request on GitHub</div>,
+       },
+       {
+         id: "url-mode-pr-graphite",
+         name: "Open PR on Graphite",
+         keywords: "graphite open browser external link stacking",
+         section: "PR",
+         icon: ExternalLink,
+         action: () => {
+           window.open(`https://app.graphite.dev/github/pr/${prForURLs.base.repo.owner.login}/${prForURLs.base.repo.name}/${prForURLs.number}`, '_blank');
+           setIsURLMode(false);
+         },
+         preview: <div>Open this pull request on Graphite</div>,
+       },
+       ...testing.map((url, idx) => {
+         const urlLower = url.url.toLowerCase();
+         const icon = (urlLower.includes('localhost') || urlLower.includes('.dev.codehs.com')) ? Laptop : Zap;
+         
+         return {
+           id: `url-testing-${idx}`,
+           name: url.url,
+           keywords: url.url,
+           section: "Testing",
+           icon,
+           action: () => {
+             window.open(url.url, '_blank');
+             setIsURLMode(false);
+           },
+           preview: <div className="truncate">{url.url}</div>,
+         };
+       }) as Command[],
+       ...production.map((url, idx) => ({
+         id: `url-production-${idx}`,
+         name: url.url,
+         keywords: url.url,
+         section: "Production",
+         icon: Rocket,
+         action: () => {
+           window.open(url.url, '_blank');
+           setIsURLMode(false);
+         },
+         preview: <div className="truncate">{url.url}</div>,
+       })) as Command[],
+       ...featureFlags.map((url, idx) => ({
+         id: `url-feature-flag-${idx}`,
+         name: url.url,
+         keywords: url.url,
+         section: "Feature Flags",
+         icon: Flag,
+         action: () => {
+           window.open(url.url, '_blank');
+           setIsURLMode(false);
+         },
+         preview: <div className="truncate">{url.url}</div>,
+       })) as Command[],
+       ...loom.map((url, idx) => ({
+         id: `url-loom-${idx}`,
+         name: url.url,
+         keywords: url.url,
+         section: "Videos",
+         icon: Play,
+         action: () => {
+           window.open(url.url, '_blank');
+           setIsURLMode(false);
+         },
+         preview: <div className="truncate">{url.url}</div>,
+       })) as Command[],
+       ...other.map((url, idx) => ({
+         id: `url-other-${idx}`,
+         name: url.url,
+         keywords: url.url,
+         section: "Other",
+         icon: ExternalLink,
+         action: () => {
+           window.open(url.url, '_blank');
+           setIsURLMode(false);
+         },
+         preview: <div className="truncate">{url.url}</div>,
+       })) as Command[],
+     ];
+     
+     return cmds;
+   }, [isURLMode, prForURLs]);
+
   const allCommands = useMemo(() => {
+    if (isURLMode) {
+      return urlCommands;
+    }
     return [...contextualCommands, ...commands, ...prCommands];
-  }, [contextualCommands, prCommands]);
+  }, [contextualCommands, prCommands, isURLMode, urlCommands]);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return allCommands;
     const q = query.toLowerCase();
     return allCommands.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.keywords.includes(q),
+      (c) => c.name.toLowerCase().includes(q) || c.keywords.toLowerCase().includes(q),
     );
   }, [query, allCommands]);
 
@@ -386,6 +567,8 @@ export default function CommandPalette() {
     if (!commandPaletteOpen) {
       setQuery("");
       setSelectedIndex(0);
+      setIsURLMode(false);
+      setPRForURLs(null);
     }
   }, [commandPaletteOpen]);
 
@@ -394,7 +577,13 @@ export default function CommandPalette() {
       if (!commandPaletteOpen) return;
       if (e.key === "Escape") {
         e.preventDefault();
-        toggleCommandPalette();
+        if (isURLMode) {
+          setIsURLMode(false);
+          setPRForURLs(null);
+          setQuery("");
+        } else {
+          toggleCommandPalette();
+        }
         return;
       }
       if (e.key === "ArrowDown") {
@@ -418,7 +607,7 @@ export default function CommandPalette() {
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [commandPaletteOpen, flattenedForIndex, selectedIndex, toggleCommandPalette]);
+  }, [commandPaletteOpen, flattenedForIndex, selectedIndex, toggleCommandPalette, isURLMode]);
 
   if (!commandPaletteOpen) return null;
 
@@ -429,21 +618,39 @@ export default function CommandPalette() {
         onClick={toggleCommandPalette}
       />
       <div
-        className="relative w-full max-w-3xl mx-4 h-2/3 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col"
-      >
-        <div className="flex items-center px-4 border-b h-12 gap-2 border-gray-200 dark:border-gray-700">
-          <Search className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-          <input
-            autoFocus
-            className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
-            placeholder="Type a command or search…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <button onClick={toggleCommandPalette} className="p-1 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+         className="relative w-full max-w-3xl mx-4 h-2/3 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col"
+       >
+         {isURLMode && (
+           <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between">
+             <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+               <ExternalLink className="w-3 h-3" />
+               <span>URLs from PR #{prForURLs?.number}</span>
+             </div>
+             <button 
+               onClick={() => {
+                 setIsURLMode(false);
+                 setPRForURLs(null);
+                 setQuery("");
+               }}
+               className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+             >
+               Back
+             </button>
+           </div>
+         )}
+         <div className="flex items-center px-4 border-b h-12 gap-2 border-gray-200 dark:border-gray-700">
+           <Search className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+           <input
+             autoFocus
+             className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500"
+             placeholder={isURLMode ? "Search URLs…" : "Type a command or search…"}
+             value={query}
+             onChange={(e) => setQuery(e.target.value)}
+           />
+           <button onClick={toggleCommandPalette} className="p-1 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100">
+             <X className="w-4 h-4" />
+           </button>
+         </div>
         <ul className="flex-1 overflow-y-auto py-2">
           {flattenedForIndex.length === 0 && (
             <li className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">No commands</li>
@@ -478,37 +685,42 @@ export default function CommandPalette() {
                     )}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      {isPR && pr && (
-                        <>
-                          <img
-                            src={pr.user.avatar_url}
-                            alt={pr.user.login}
-                            className="w-5 h-5 rounded-full flex-shrink-0"
-                            title={pr.user.login}
-                          />
-                          <span className={cn("flex-shrink-0", getPRColorClass(pr))}>
-                            {pr.draft ? (
-                              <GitPullRequestDraft className="w-4 h-4" />
-                            ) : (
-                              <GitPullRequest className="w-4 h-4" />
-                            )}
-                          </span>
-                        </>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <span className="truncate block">{cmd.name}</span>
-                        {isPR && pr && (
-                          <span className={cn(
-                            "text-xs truncate block",
-                            globalIdx === selectedIndex
-                              ? "text-gray-600 dark:text-gray-400"
-                              : "text-gray-500 dark:text-gray-500"
-                          )}>
-                            {formatRelativeTime(pr.updated_at)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                       {isPR && pr && (
+                         <>
+                           <img
+                             src={pr.user.avatar_url}
+                             alt={pr.user.login}
+                             className="w-5 h-5 rounded-full flex-shrink-0"
+                             title={pr.user.login}
+                           />
+                           <span className={cn("flex-shrink-0", getPRColorClass(pr))}>
+                             {pr.draft ? (
+                               <GitPullRequestDraft className="w-4 h-4" />
+                             ) : (
+                               <GitPullRequest className="w-4 h-4" />
+                             )}
+                           </span>
+                         </>
+                       )}
+                       {cmd.icon && !isPR && (
+                         <span className="flex-shrink-0 text-gray-600 dark:text-gray-400">
+                           {React.createElement(cmd.icon, { className: "w-4 h-4" })}
+                         </span>
+                       )}
+                       <div className="flex-1 min-w-0">
+                         <span className="truncate block">{cmd.name}</span>
+                         {isPR && pr && (
+                           <span className={cn(
+                             "text-xs truncate block",
+                             globalIdx === selectedIndex
+                               ? "text-gray-600 dark:text-gray-400"
+                               : "text-gray-500 dark:text-gray-500"
+                           )}>
+                             {formatRelativeTime(pr.updated_at)}
+                           </span>
+                         )}
+                       </div>
+                     </div>
                     {cmd.shortcut && <span className="opacity-60 ml-2 flex-shrink-0">{cmd.shortcut}</span>}
                   </li>
                 );

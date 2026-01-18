@@ -114,15 +114,25 @@ export default function PRDetailView() {
         conversationTabRef.current?.focusCommentForm();
       }, 50);
     };
+    const onOpenURLs = () => {
+      // Trigger command to open URLs palette
+      const { toggleCommandPalette } = useUIStore.getState();
+      // Trigger the "open-urls" command in the palette
+      // This will be handled by a mechanism that triggers the command within the palette
+      // First, open the command palette, then simulate opening the URL mode
+      window.dispatchEvent(new CustomEvent("pr-action:trigger-url-mode", { detail: { pr } }));
+    };
 
     window.addEventListener("pr-action:approve", onApprove);
     window.addEventListener("pr-action:focus-comment", onFocusComment);
+    window.addEventListener("pr-action:open-urls", onOpenURLs);
     
     return () => {
       window.removeEventListener("pr-action:approve", onApprove);
       window.removeEventListener("pr-action:focus-comment", onFocusComment);
+      window.removeEventListener("pr-action:open-urls", onOpenURLs);
     };
-  }, []);
+  }, [pr]);
 
   useEffect(() => {
     // Load data even without token if in dev mode

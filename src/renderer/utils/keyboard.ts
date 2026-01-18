@@ -102,6 +102,13 @@ export function setupKeyboardShortcuts() {
         if (nav) nav("/pulls");
         return;
       }
+
+      // Open URLs palette (Cmd/Ctrl + O) - only on PR detail page
+      if ((e.key === "o" || e.key === "O") && !e.shiftKey) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("pr-action:open-urls"));
+        return;
+      }
     }
   };
 
