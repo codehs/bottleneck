@@ -18,7 +18,9 @@ export function ActivityItem({ activity }: ActivityItemProps) {
 
   const handleClick = () => {
     if (canNavigateToPR(activity)) {
-      navigate(`/pulls/${activity.repoOwner}/${activity.repo}/${activity.prNumber}`);
+      navigate(`/pulls/${activity.repoOwner}/${activity.repo}/${activity.prNumber}`, {
+        state: { activeTab: "conversation" }
+      });
     }
   };
 

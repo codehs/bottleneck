@@ -118,7 +118,9 @@ export function IssueDevelopmentTreeView({
     const handlePRClick = (pr: NonNullable<Issue["linkedPRs"]>[number]) => {
         const prOwner = pr.repository?.owner || repoOwner;
         const prRepo = pr.repository?.name || repoName;
-        navigate(`/pulls/${prOwner}/${prRepo}/${pr.number}`);
+        navigate(`/pulls/${prOwner}/${prRepo}/${pr.number}`, {
+            state: { activeTab: "conversation" }
+        });
     };
 
     return (

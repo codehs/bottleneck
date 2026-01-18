@@ -494,7 +494,9 @@ export default function BranchesView() {
     const handleBranchClick = () => {
       // If branch has a PR, navigate to PR details
       if (existingPR && selectedRepo) {
-        navigate(`/pulls/${selectedRepo.owner}/${selectedRepo.name}/${existingPR.number}`);
+        navigate(`/pulls/${selectedRepo.owner}/${selectedRepo.name}/${existingPR.number}`, {
+          state: { activeTab: "conversation" }
+        });
       } else {
         // Otherwise, toggle selection
         handleBranchSelect(branch.name, !isSelected);
@@ -582,7 +584,9 @@ export default function BranchesView() {
                   onClick={(e) => {
                     e.stopPropagation();
                     if (selectedRepo) {
-                      navigate(`/pulls/${selectedRepo.owner}/${selectedRepo.name}/${existingPR.number}`);
+                      navigate(`/pulls/${selectedRepo.owner}/${selectedRepo.name}/${existingPR.number}`, {
+                        state: { activeTab: "conversation" }
+                      });
                     }
                   }}
                 />
@@ -595,7 +599,9 @@ export default function BranchesView() {
                   onClick={(e) => {
                     e.stopPropagation();
                     if (selectedRepo) {
-                      navigate(`/pulls/${selectedRepo.owner}/${selectedRepo.name}/${existingPR.number}`);
+                      navigate(`/pulls/${selectedRepo.owner}/${selectedRepo.name}/${existingPR.number}`, {
+                        state: { activeTab: "conversation" }
+                      });
                     }
                   }}
                 />

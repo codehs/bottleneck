@@ -59,7 +59,7 @@ export default function PRDetailView() {
   );
 
   const [activeTab, setActiveTab] = useState<"conversation" | "files" | "comments" | "commits">(
-    (location.state as any)?.activeTab || "files",
+    (location.state as any)?.activeTab || "conversation",
   );
 
   const tabs = ["conversation", "files", "comments", "commits"] as const;
