@@ -183,7 +183,7 @@ const commands: Command[] = [
 ];
 
 export default function CommandPalette() {
-  const { commandPaletteOpen, toggleCommandPalette } = useUIStore();
+  const { commandPaletteOpen, toggleCommandPalette, currentPage } = useUIStore();
   const { pullRequests, repositories, setSelectedRepo } = usePRStore();
   const { favorites, loadFavorites } = useRepoFavoritesStore();
   const navigate = useNavigate();
@@ -276,7 +276,9 @@ export default function CommandPalette() {
               const setRepo = (window as any).__commandSetSelectedRepo;
               if (setRepo) {
                 setRepo(repo);
-                navigate("/pulls");
+                // Navigate to the same page type as before (or /pulls if on a detail view)
+                const targetPage = currentPage;
+                navigate(targetPage);
               }
             },
             preview: <div>Switch to {repo.full_name}</div>,
@@ -286,7 +288,7 @@ export default function CommandPalette() {
     }
     
     return cmds;
-  }, [location.pathname, repositories, favorites, navigate]);
+  }, [location.pathname, repositories, favorites, navigate, currentPage]);
 
   // Create a lookup map for quick PR access by command ID
   const prLookupMap = useMemo(() => {

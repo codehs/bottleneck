@@ -14,6 +14,7 @@ export interface IssueFilters {
 
 interface IssueState {
   issues: Map<string, Issue>;
+  repoIssueCache: Map<string, Map<string, Issue>>; // repoFullName -> Issues Map
   loadedRepos: Set<string>;
   loading: boolean;
   error: string | null;
@@ -44,6 +45,7 @@ interface IssueState {
 
 export const useIssueStore = create<IssueState>((set, get) => ({
   issues: new Map(),
+  repoIssueCache: new Map(),
   loadedRepos: new Set(),
   loading: false,
   error: null,
@@ -105,9 +107,14 @@ export const useIssueStore = create<IssueState>((set, get) => ({
       });
 
       console.log(`[STORE] ✅ fetchIssues: Loaded ${issues.length} issues`);
-      set({
-        issues: issueMap,
-        loading: false,
+      set((state) => {
+        const newCache = new Map(state.repoIssueCache);
+        newCache.set(repoFullName, issueMap);
+        return {
+          issues: issueMap,
+          repoIssueCache: newCache,
+          loading: false,
+        };
       });
 
       get().loadedRepos.add(repoFullName);
@@ -204,6 +211,7 @@ export const useIssueStore = create<IssueState>((set, get) => ({
       return;
     }
     const key = `${issue.repository.owner.login}/${issue.repository.name}#${issue.number}`;
+    const repoKey = `${issue.repository.owner.login}/${issue.repository.name}`;
     console.log(`[STORE] 📝 updateIssue: #${issue.number}`, {
       labels: issue.labels.map(l => l.name),
       state: issue.state
@@ -220,7 +228,17 @@ export const useIssueStore = create<IssueState>((set, get) => ({
       };
 
       newIssues.set(key, updatedIssue);
-      return { issues: newIssues };
+      
+      // Also update cache
+      const newCache = new Map(state.repoIssueCache);
+      const repoIssues = newCache.get(repoKey) || new Map<string, Issue>();
+      repoIssues.set(key, updatedIssue);
+      newCache.set(repoKey, repoIssues);
+      
+      return { 
+        issues: newIssues,
+        repoIssueCache: newCache,
+      };
     });
   },
 

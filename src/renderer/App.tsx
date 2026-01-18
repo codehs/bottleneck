@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "./stores/authStore";
 import { useUIStore } from "./stores/uiStore";
 import { usePRStore } from "./stores/prStore";
@@ -34,12 +34,23 @@ function App() {
   PerfLogger.mark("App component function called");
 
   const { isAuthenticated, checkAuth, token } = useAuthStore();
-  const { sidebarOpen, sidebarWidth, setSidebarWidth, rightPanelOpen, theme } =
+  const { sidebarOpen, sidebarWidth, setSidebarWidth, rightPanelOpen, theme, setCurrentPage } =
     useUIStore();
   const { loadSettings } = useSettingsStore();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
 
   PerfLogger.mark("App hooks initialized");
+
+  // Track current page for repo switching
+  useEffect(() => {
+    const pathname = location.pathname;
+    // Extract the page type from the pathname
+    // For specific PR/issue details, save only the page type (not the specific entity)
+    const pagePath = pathname.split('/')[1]; // e.g., 'pulls', 'issues', 'feed', 'me', etc.
+    const pageToSave = pagePath ? `/${pagePath}` : '/pulls';
+    setCurrentPage(pageToSave);
+  }, [location.pathname, setCurrentPage]);
 
   useEffect(() => {
     PerfLogger.mark("App useEffect (init) started");

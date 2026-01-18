@@ -43,107 +43,115 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   syncDebounceTimer: null as NodeJS.Timeout | null,
 
   syncAll: async () => {
-    const state = get();
+  const state = get();
 
-    // Debounce: if already syncing or a sync was just triggered, ignore
-    if (state.isSyncing) {
-      console.log("Sync already in progress, skipping...");
-      return;
+  // Debounce: if already syncing or a sync was just triggered, ignore
+  if (state.isSyncing) {
+    console.log("Sync already in progress, skipping...");
+    return;
+  }
+
+  // Clear any existing debounce timer
+  if (state.syncDebounceTimer) {
+    clearTimeout(state.syncDebounceTimer);
+  }
+
+  // Set a debounce timer to prevent rapid clicks
+  const timer = setTimeout(() => {
+    set({ syncDebounceTimer: null });
+  }, 1000);
+
+  set({
+    isSyncing: true,
+    syncProgress: 0,
+    syncMessage: "Starting sync...",
+    syncErrors: [],
+    syncDebounceTimer: timer,
+  });
+
+  try {
+    // Get all repositories
+    const prStore = usePRStore.getState();
+
+    // Sync repositories first
+    set({ syncMessage: "Fetching repositories..." });
+    await prStore.fetchRepositories();
+    set({ syncProgress: 20 });
+
+    // Sync all recently viewed repos + selected repo in parallel
+    const selectedRepo = prStore.selectedRepo;
+    const recentRepos = prStore.recentlyViewedRepos;
+    
+    // Combine selected repo + recent repos, remove duplicates
+    const reposToSync = selectedRepo
+      ? [selectedRepo, ...recentRepos.filter((r) => r.id !== selectedRepo.id)]
+      : recentRepos;
+
+    const totalRepos = reposToSync.length;
+
+    if (totalRepos === 0) {
+      set({
+        syncProgress: 100,
+        syncMessage: "No repositories to sync",
+      });
+    } else {
+      // Sync all repos in parallel for speed
+      const syncPromises = reposToSync.map((repo, index) => {
+        const shouldReplaceStore = selectedRepo
+          ? repo.id === selectedRepo.id
+          : index === 0;
+
+        return prStore.fetchPullRequests(repo.owner, repo.name, true, {
+          replaceStore: shouldReplaceStore,
+        }).catch((error) => {
+          get().addSyncError(
+            `Failed to sync ${repo.full_name}: ${(error as Error).message}`,
+          );
+        });
+      });
+
+      // Update progress as repos complete
+      let completed = 0;
+      const updateProgress = () => {
+        completed++;
+        const progress = 20 + 80 * (completed / totalRepos);
+        set({
+          syncProgress: Math.min(progress, 99), // Keep at 99 until all done
+          syncMessage: `Syncing ${completed}/${totalRepos} repos...`,
+        });
+      };
+
+      // Execute with progress updates
+      for (const promise of syncPromises) {
+        await promise;
+        updateProgress();
+      }
     }
 
-    // Clear any existing debounce timer
-    if (state.syncDebounceTimer) {
-      clearTimeout(state.syncDebounceTimer);
-    }
-
-    // Set a debounce timer to prevent rapid clicks
-    const timer = setTimeout(() => {
-      set({ syncDebounceTimer: null });
-    }, 1000);
-
+    const syncTime = new Date();
     set({
-      isSyncing: true,
-      syncProgress: 0,
-      syncMessage: "Starting sync...",
-      syncErrors: [],
-      syncDebounceTimer: timer,
+      isSyncing: false,
+      lastSyncTime: syncTime,
+      syncProgress: 100,
+      syncMessage: "Sync complete!",
+      syncErrors: [], // Clear errors on successful sync
     });
 
-    try {
-      // Get all repositories
-      const prStore = usePRStore.getState();
+    // Save sync time to localStorage for persistence
+    localStorage.setItem("lastSyncTime", syncTime.toISOString());
 
-      // Sync repositories first
-      set({ syncMessage: "Fetching repositories..." });
-      await prStore.fetchRepositories();
-      set({ syncProgress: 20 });
-
-      // Only sync PRs for the currently selected repository
-      // or recently viewed repos to avoid excessive API calls
-      const selectedRepo = prStore.selectedRepo;
-      const recentRepos = prStore.recentlyViewedRepos.slice(0, 3); // Limit to 3 recent repos
-      const reposToSync = selectedRepo
-        ? [selectedRepo, ...recentRepos.filter((r) => r.id !== selectedRepo.id)]
-        : recentRepos;
-
-      const totalRepos = reposToSync.length;
-
-      if (totalRepos === 0) {
-        set({
-          syncProgress: 100,
-          syncMessage: "No repositories to sync",
-        });
-      } else {
-        // Sync PRs for selected/recent repositories only
-        for (let i = 0; i < totalRepos; i++) {
-          const repo = reposToSync[i];
-          const progress = 20 + 80 * ((i + 1) / totalRepos);
-          const shouldReplaceStore = selectedRepo
-            ? repo.id === selectedRepo.id
-            : i === 0;
-
-          set({
-            syncProgress: progress,
-            syncMessage: `Syncing ${repo.full_name}...`,
-          });
-
-          try {
-            console.log(`[SyncStore] Syncing ${repo.full_name} (replaceStore: ${shouldReplaceStore})`);
-            await prStore.fetchPullRequests(repo.owner, repo.name, true, {
-              replaceStore: shouldReplaceStore,
-            }); // Force refresh
-          } catch (error) {
-            get().addSyncError(
-              `Failed to sync ${repo.full_name}: ${(error as Error).message}`,
-            );
-          }
-        }
-      }
-
-      const syncTime = new Date();
-      set({
-        isSyncing: false,
-        lastSyncTime: syncTime,
-        syncProgress: 100,
-        syncMessage: "Sync complete!",
-        syncErrors: [], // Clear errors on successful sync
-      });
-
-      // Save sync time to localStorage for persistence
-      localStorage.setItem("lastSyncTime", syncTime.toISOString());
-
-      // Clear message after a delay
-      setTimeout(() => {
-        set({ syncMessage: "", syncProgress: 0 });
-      }, 3000);
-    } catch (error) {
-      set({
-        isSyncing: false,
-        syncMessage: "Sync failed",
-        syncProgress: 0,
-      });
-      get().addSyncError((error as Error).message);
-    }
+    // Clear message after a delay
+    setTimeout(() => {
+      set({ syncMessage: "", syncProgress: 0 });
+    }, 3000);
+  } catch (error) {
+    set({
+      isSyncing: false,
+      syncMessage: "Sync failed",
+      syncProgress: 0,
+    });
+    get().addSyncError((error as Error).message);
+  }
   },
 
   syncRepository: async (owner: string, repo: string) => {

@@ -17,6 +17,7 @@ interface UIState {
   showWhitespace: boolean;
   wordWrap: boolean;
   theme: "light" | "dark";
+  currentPage: string; // Track current page for repo switching
 
   // PR navigation state for sidebar
   prNavigationState: {
@@ -53,6 +54,7 @@ interface UIState {
       | ((filters: UIState["prListFilters"]) => UIState["prListFilters"]),
   ) => void;
   resetPRListFilters: () => void;
+  setCurrentPage: (page: string) => void;
   
   // PR action dispatchers - these emit events that PRDetailView listens to
   triggerApprovePR: () => void;
@@ -73,6 +75,7 @@ export const useUIStore = create<UIState>()(
       showWhitespace: false,
       wordWrap: false,
       theme: "dark",
+      currentPage: "/pulls",
       prNavigationState: null,
       prListFilters: {
         sortBy: "updated",
@@ -140,6 +143,7 @@ export const useUIStore = create<UIState>()(
             selectedTeams: [],
           },
         }),
+      setCurrentPage: (page) => set({ currentPage: page }),
       
       triggerApprovePR: () => {
         window.dispatchEvent(new CustomEvent("pr-action:approve"));

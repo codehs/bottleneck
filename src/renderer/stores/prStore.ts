@@ -22,6 +22,7 @@ export type PRFilterType = 'open' | 'draft' | 'review-requested' | 'merged' | 'c
 
 interface PRState {
   pullRequests: Map<string, PullRequest>;
+  repoPRCache: Map<string, Map<string, PullRequest>>; // repoFullName -> PRs Map
   repositories: Repository[];
   selectedRepo: Repository | null;
   recentlyViewedRepos: Repository[];
@@ -119,25 +120,90 @@ const saveSelectedRepo = async (repo: Repository | null) => {
   }
 };
 
+// Load PR cache from electron store
+const loadPRCache = async (): Promise<Map<string, Map<string, PullRequest>>> => {
+  if (window.electron) {
+    try {
+      const result = await window.electron.settings.get("prCache");
+      if (result.success && result.value) {
+        const cached = result.value as Record<string, Record<string, any>>;
+        const cache = new Map<string, Map<string, PullRequest>>();
+        
+        for (const [repoKey, prs] of Object.entries(cached)) {
+          const prMap = new Map<string, PullRequest>();
+          for (const [key, pr] of Object.entries(prs)) {
+            prMap.set(key, pr as PullRequest);
+          }
+          cache.set(repoKey, prMap);
+        }
+        
+        return cache;
+      }
+    } catch (error) {
+      console.error("Failed to load PR cache:", error);
+    }
+  }
+  return new Map();
+};
+
+// Save PR cache to electron store (debounced)
+let cacheSaveTimer: NodeJS.Timeout | null = null;
+const savePRCache = async (cache: Map<string, Map<string, PullRequest>>) => {
+  if (cacheSaveTimer) {
+    clearTimeout(cacheSaveTimer);
+  }
+  
+  cacheSaveTimer = setTimeout(async () => {
+    if (window.electron) {
+      try {
+        const cacheObj: Record<string, Record<string, any>> = {};
+        
+        for (const [repoKey, prMap] of cache.entries()) {
+          cacheObj[repoKey] = {};
+          for (const [key, pr] of prMap.entries()) {
+            cacheObj[repoKey][key] = pr;
+          }
+        }
+        
+        await window.electron.settings.set("prCache", cacheObj);
+        console.log(`[PRStore] Saved PR cache for ${cache.size} repos`);
+      } catch (error) {
+        console.error("Failed to save PR cache:", error);
+      }
+    }
+  }, 5000); // Debounce by 5 seconds
+};
+
 export const usePRStore = create<PRState>((set, get) => {
   // Initialize from storage
-  Promise.all([loadRecentlyViewedRepos(), loadSelectedRepo()]).then(
-    ([recentRepos, selectedRepo]) => {
+  Promise.all([loadRecentlyViewedRepos(), loadSelectedRepo(), loadPRCache()]).then(
+    ([recentRepos, selectedRepo, prCache]) => {
       const updates: Partial<PRState> = {};
 
       if (recentRepos.length > 0) {
         updates.recentlyViewedRepos = recentRepos;
       }
 
+      // Restore PR cache
+      if (prCache.size > 0) {
+        updates.repoPRCache = prCache;
+      }
+
       // Use the saved selected repo, or fall back to the most recent one
       if (selectedRepo) {
+        // Try to restore cached PRs for this repo
+        const repoKey = `${selectedRepo.owner}/${selectedRepo.name}`;
+        if (prCache.has(repoKey)) {
+          updates.pullRequests = prCache.get(repoKey)!;
+          updates.currentRepoKey = repoKey;
+        }
         updates.selectedRepo = selectedRepo;
       } else if (recentRepos.length > 0) {
         updates.selectedRepo = recentRepos[0];
       }
 
       if (Object.keys(updates).length > 0) {
-        set(updates);
+        set(updates as PRState);
 
         // Don't auto-fetch here - let the sync store handle initial fetch
         // This prevents duplicate fetches on hard refresh
@@ -147,6 +213,7 @@ export const usePRStore = create<PRState>((set, get) => {
 
   return {
     pullRequests: new Map(),
+    repoPRCache: new Map(),
     repositories: [],
     selectedRepo: null,
     recentlyViewedRepos: [],
@@ -242,11 +309,18 @@ export const usePRStore = create<PRState>((set, get) => {
         }
 
         if (replaceStore) {
-          set({
-            pullRequests: prMap,
-            loading: false,
-            currentRepoKey: repoFullName,
-            pendingRepoKey: null,
+          set((state) => {
+            // Add to repoPRCache
+            const newCache = new Map(state.repoPRCache);
+            newCache.set(repoFullName, prMap);
+            
+            return {
+              pullRequests: prMap,
+              repoPRCache: newCache,
+              loading: false,
+              currentRepoKey: repoFullName,
+              pendingRepoKey: null,
+            };
           });
 
           // Auto-group PRs after fetching
@@ -464,16 +538,26 @@ export const usePRStore = create<PRState>((set, get) => {
     },
 
     setSelectedRepo: (repo) => {
-      set(() => ({
-        selectedRepo: repo,
-        ...(repo
-          ? {}
-          : {
+      set((state) => {
+        if (!repo) {
+          return {
+            selectedRepo: null,
             pullRequests: new Map(),
             currentRepoKey: null,
             pendingRepoKey: null,
-          }),
-      }));
+          };
+        }
+
+        // Try to restore from cache first
+        const repoKey = `${repo.owner}/${repo.name}`;
+        const cachedPRs = state.repoPRCache.get(repoKey);
+        
+        return {
+          selectedRepo: repo,
+          pullRequests: cachedPRs || new Map(),
+          currentRepoKey: cachedPRs ? repoKey : null,
+        };
+      });
 
       // Save to electron store
       saveSelectedRepo(repo);
@@ -620,14 +704,28 @@ export const usePRStore = create<PRState>((set, get) => {
       set((state) => {
         const newPRs = new Map(state.pullRequests);
         const key = `${pr.base.repo.owner.login}/${pr.base.repo.name}#${pr.number}`;
+        const repoKey = `${pr.base.repo.owner.login}/${pr.base.repo.name}`;
 
         // Merge with existing PR to preserve loading states if not explicitly cleared
         const existing = newPRs.get(key);
         const merged = existing ? { ...existing, ...pr } : pr;
 
         newPRs.set(key, merged);
-        return { pullRequests: newPRs };
+        
+        // Also update cache
+        const newCache = new Map(state.repoPRCache);
+        const repoPRs = newCache.get(repoKey) || new Map<string, PullRequest>();
+        repoPRs.set(key, merged);
+        newCache.set(repoKey, repoPRs);
+        
+        return { 
+          pullRequests: newPRs,
+          repoPRCache: newCache,
+        };
       });
+
+      // Debounce save
+      savePRCache(get().repoPRCache);
 
       // Re-group after update
       get().groupPRsByPrefix();
@@ -636,19 +734,33 @@ export const usePRStore = create<PRState>((set, get) => {
     bulkUpdatePRs: (prs) => {
       set((state) => {
         const newPRs = new Map(state.pullRequests);
+        const newCache = new Map(state.repoPRCache);
 
         prs.forEach((pr) => {
           const key = `${pr.base.repo.owner.login}/${pr.base.repo.name}#${pr.number}`;
+          const repoKey = `${pr.base.repo.owner.login}/${pr.base.repo.name}`;
 
           // Only add PRs that don't exist in the store
           // This prevents background fetches from overwriting user actions with stale API data
           if (!newPRs.has(key)) {
             newPRs.set(key, pr);
+            
+            // Also update cache
+            const repoPRs = newCache.get(repoKey) || new Map<string, PullRequest>();
+            repoPRs.set(key, pr);
+            newCache.set(repoKey, repoPRs);
           }
           // If PR exists, don't overwrite it - store is source of truth
         });
-        return { pullRequests: newPRs };
+        
+        return { 
+          pullRequests: newPRs,
+          repoPRCache: newCache,
+        };
       });
+
+      // Debounce save
+      savePRCache(get().repoPRCache);
 
       // Re-group after bulk update
       get().groupPRsByPrefix();
