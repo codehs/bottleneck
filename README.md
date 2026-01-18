@@ -169,17 +169,17 @@ If the React DevTools Profiler tab is missing inside Electron DevTools, walk thr
 
 - `Cmd/Ctrl + B` - Toggle sidebar
 - `Cmd/Ctrl + Shift + B` - Toggle right panel
-- `Cmd/Ctrl + Shift + P` - Command palette
+- `Cmd/Ctrl + K` - Command palette
 - `Cmd/Ctrl + /` - Show keyboard shortcuts
 
 ### Navigation
 
 - `Cmd/Ctrl + P` - Go to PR
 - `Cmd/Ctrl + T` - Go to file
-- `Cmd/Ctrl + [` - Previous PR
-- `Cmd/Ctrl + ]` - Next PR
-- `Alt + Up` - Previous file
-- `Alt + Down` - Next file
+- `j` - Previous PR
+- `k` - Next PR
+- `Cmd/Ctrl + [` - Previous file
+- `Cmd/Ctrl + ]` - Next file
 
 ### Review
 

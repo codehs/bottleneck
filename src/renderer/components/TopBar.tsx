@@ -747,7 +747,6 @@ export default function TopBar() {
               : "bg-white hover:bg-gray-100 text-gray-700 border border-gray-300",
           )}
         >
-          <Command className="w-3 h-3" />
           <span>Command Palette</span>
           <span
             className={cn(
@@ -755,7 +754,7 @@ export default function TopBar() {
               theme === "dark" ? "text-gray-500" : "text-gray-600",
             )}
           >
-            ⌘⇧P
+            ⌘K
           </span>
         </button>
       </div>

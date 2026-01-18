@@ -100,7 +100,7 @@ export function createMenu(mainWindow: BrowserWindow): Menu {
       submenu: [
         {
           label: "Command Palette",
-          accelerator: "CmdOrCtrl+Shift+P",
+          accelerator: "CmdOrCtrl+K",
           click: () => {
             mainWindow.webContents.send("open-command-palette");
           },

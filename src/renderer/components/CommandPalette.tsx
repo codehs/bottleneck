@@ -32,7 +32,7 @@ function formatRelativeTime(date: string): string {
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
-  
+
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
@@ -146,7 +146,7 @@ const commands: Command[] = [
   },
   {
     id: "nav-me",
-    name: "Go to Me",
+    name: "My Stuff",
     keywords: "navigate me profile assignments",
     action: () => {
       const nav = window.__commandNavigate;
@@ -195,7 +195,7 @@ export default function CommandPalette() {
      loadFavorites();
      ((window as any).__commandNavigate) = navigate;
      ((window as any).__commandSetSelectedRepo) = setSelectedRepo;
-     
+
      // Listen for trigger to open URL mode
      const handleTriggerURLMode = (e: Event) => {
        const customEvent = e as CustomEvent;
@@ -211,9 +211,9 @@ export default function CommandPalette() {
          }
        }
      };
-     
+
      window.addEventListener("pr-action:trigger-url-mode", handleTriggerURLMode);
-     
+
      return () => {
        delete (window as any).__commandNavigate;
        delete (window as any).__commandSetSelectedRepo;
@@ -229,7 +229,7 @@ export default function CommandPalette() {
 
   const contextualCommands = useMemo(() => {
     const cmds: Command[] = [];
-    
+
     const prMatch = location.pathname.match(/^\/pulls\/([^/]+)\/([^/]+)\/(\d+)$/);
     if (prMatch) {
       const [, owner, repo, prNumber] = prMatch;
@@ -262,42 +262,6 @@ export default function CommandPalette() {
         },
         preview: <div>Copy "gh pr checkout {prNumber}" to clipboard</div>,
       });
-      cmds.push({
-        id: "open-pr-github",
-        name: "Open PR on GitHub",
-        keywords: "github open browser external link",
-        action: () => {
-          window.open(`https://github.com/${owner}/${repo}/pull/${prNumber}`, '_blank');
-        },
-        preview: <div>Open this pull request on GitHub</div>,
-      });
-      cmds.push({
-        id: "open-urls",
-        name: "Open URLs from PR",
-        keywords: "open url link browser external",
-        shortcut: "⌘O",
-        action: () => {
-          // Find the PR in the store
-          const prKey = `${owner}/${repo}#${prNumber}`;
-          const pr = pullRequests.get(prKey);
-          if (pr) {
-            setPRForURLs(pr);
-            setIsURLMode(true);
-            setQuery("");
-            setSelectedIndex(0);
-          }
-        },
-        preview: <div>Open a command palette with URLs from this PR</div>,
-      });
-      cmds.push({
-        id: "open-pr-graphite",
-        name: "Open PR on Graphite",
-        keywords: "graphite open browser external link stacking",
-        action: () => {
-          window.open(`https://app.graphite.dev/github/pr/${owner}/${repo}/${prNumber}`, '_blank');
-        },
-        preview: <div>Open this pull request on Graphite</div>,
-      });
     }
 
     // Add starred repository commands
@@ -328,7 +292,7 @@ export default function CommandPalette() {
         });
       }
     }
-    
+
     return cmds;
   }, [location.pathname, repositories, favorites, navigate, currentPage]);
 
@@ -387,7 +351,7 @@ export default function CommandPalette() {
   // Generate URL commands when in URL mode
    const urlCommands = useMemo(() => {
      if (!isURLMode || !prForURLs) return [];
-     
+
      // Get comments and reviews from the PR lookup map if available
      // For now, we'll just extract from the body since comments/reviews aren't passed
      const urls = extractAllURLsFromPR(
@@ -395,14 +359,14 @@ export default function CommandPalette() {
        [], // Comments would need to be passed in separately
        []  // Reviews would need to be passed in separately
      );
-     
+
      // Categorize URLs by domain
      const testing: typeof urls = [];
      const production: typeof urls = [];
      const featureFlags: typeof urls = [];
      const loom: typeof urls = [];
      const other: typeof urls = [];
-     
+
      urls.forEach((url) => {
        const urlLower = url.url.toLowerCase();
        if (urlLower.includes('internal/feature_flag')) {
@@ -417,14 +381,14 @@ export default function CommandPalette() {
          other.push(url);
        }
      });
-     
+
      // Sort each section alphabetically
      testing.sort((a, b) => a.url.toLowerCase().localeCompare(b.url.toLowerCase()));
      production.sort((a, b) => a.url.toLowerCase().localeCompare(b.url.toLowerCase()));
      featureFlags.sort((a, b) => a.url.toLowerCase().localeCompare(b.url.toLowerCase()));
      loom.sort((a, b) => a.url.toLowerCase().localeCompare(b.url.toLowerCase()));
      other.sort((a, b) => a.url.toLowerCase().localeCompare(b.url.toLowerCase()));
-     
+
      const cmds: Command[] = [
        {
          id: "url-mode-pr-github",
@@ -453,7 +417,7 @@ export default function CommandPalette() {
        ...testing.map((url, idx) => {
          const urlLower = url.url.toLowerCase();
          const icon = (urlLower.includes('localhost') || urlLower.includes('.dev.codehs.com')) ? Laptop : Zap;
-         
+
          return {
            id: `url-testing-${idx}`,
            name: url.url,
@@ -516,7 +480,7 @@ export default function CommandPalette() {
          preview: <div className="truncate">{url.url}</div>,
        })) as Command[],
      ];
-     
+
      return cmds;
    }, [isURLMode, prForURLs]);
 
@@ -626,7 +590,7 @@ export default function CommandPalette() {
                <ExternalLink className="w-3 h-3" />
                <span>URLs from PR #{prForURLs?.number}</span>
              </div>
-             <button 
+             <button
                onClick={() => {
                  setIsURLMode(false);
                  setPRForURLs(null);
@@ -667,7 +631,7 @@ export default function CommandPalette() {
                 const globalIdx = flattenedForIndex.indexOf(cmd);
                 const isPR = cmd.id.startsWith("pr-");
                 const pr = isPR ? prLookupMap.get(cmd.id) : null;
-                
+
                 return (
                   <li
                     key={cmd.id}
