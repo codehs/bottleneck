@@ -5,6 +5,7 @@ import { useUIStore } from "../stores/uiStore";
 import { useSyncStore } from "../stores/syncStore";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePRStore } from "../stores/prStore";
+import { useRepoFavoritesStore } from "../stores/repoFavoritesStore";
 import { getPRIcon, getPRColorClass } from "../utils/prStatus";
 
 interface Command {
@@ -173,17 +174,20 @@ const commands: Command[] = [
 
 export default function CommandPalette() {
   const { commandPaletteOpen, toggleCommandPalette } = useUIStore();
-  const { pullRequests } = usePRStore();
+  const { pullRequests, repositories, setSelectedRepo } = usePRStore();
+  const { favorites, loadFavorites } = useRepoFavoritesStore();
   const navigate = useNavigate();
   const location = useLocation();
-  // Expose navigate so that commands array can use it without hooks
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Load favorites and expose navigate
   useEffect(() => {
+    loadFavorites();
     ((window as any).__commandNavigate) = navigate;
+    ((window as any).__commandSetSelectedRepo) = setSelectedRepo;
     return () => {
       delete (window as any).__commandNavigate;
+      delete (window as any).__commandSetSelectedRepo;
     };
-  }, [navigate]);
+  }, [navigate, loadFavorites, setSelectedRepo]);
 
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -243,9 +247,36 @@ export default function CommandPalette() {
         preview: <div>Open this pull request on Graphite</div>,
       });
     }
+
+    // Add starred repository commands
+    if (repositories && favorites.length > 0) {
+      const starredRepos = repositories.filter((repo) => {
+        const repoKey = repo.full_name || `${repo.owner}/${repo.name}`;
+        return favorites.some((f) => f.repoKey === repoKey || f.repoKey === `${repo.owner}/${repo.name}`);
+      });
+
+      if (starredRepos.length > 0) {
+        starredRepos.forEach((repo) => {
+          cmds.push({
+            id: `switch-repo-${repo.id}`,
+            name: `Switch to ${repo.full_name}`,
+            keywords: `repo switch go navigate ${repo.full_name} ${repo.owner} ${repo.name}`,
+            section: "Starred Repos",
+            action: () => {
+              const setRepo = (window as any).__commandSetSelectedRepo;
+              if (setRepo) {
+                setRepo(repo);
+                navigate("/pulls");
+              }
+            },
+            preview: <div>Switch to {repo.full_name}</div>,
+          });
+        });
+      }
+    }
     
     return cmds;
-  }, [location.pathname]);
+  }, [location.pathname, repositories, favorites, navigate]);
 
   // Create a lookup map for quick PR access by command ID
   const prLookupMap = useMemo(() => {
