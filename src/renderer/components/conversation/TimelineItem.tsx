@@ -44,48 +44,49 @@ export function TimelineItem({ item, theme }: TimelineItemProps) {
   }
 
   return (
-    <div className="card p-4">
-      <div className="flex items-start space-x-3">
-        <img
-          src={item.user.avatar_url}
-          alt={item.user.login}
-          className="w-8 h-8 rounded-full"
-        />
-        <div className="flex-1">
-          <div className="flex items-center space-x-2 mb-2">
-            {item.type === "review" && getReviewIcon((item as Review).state)}
-            <span className="font-semibold">{item.user.login}</span>
-            {item.type === "review" && (
-              <span className="text-sm">
-                {(item as Review).state === "APPROVED" &&
-                  "approved these changes"}
-                {(item as Review).state === "CHANGES_REQUESTED" &&
-                  "requested changes"}
-                {(item as Review).state === "COMMENTED" && "reviewed"}
-              </span>
-            )}
-            <span
-              className={cn(
-                "text-sm",
-                theme === "dark" ? "text-gray-500" : "text-gray-600",
-              )}
-            >
-              {formatDistanceToNow(new Date(item.timestamp), {
-                addSuffix: true,
-              })}
-            </span>
-          </div>
-          {item.body && item.body.trim() && (
-            <div
-              className={cn(
-                theme === "dark" ? "text-gray-300" : "text-gray-700",
-              )}
-            >
-              <Markdown content={item.body} variant="compact" />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+     <div className="card p-4">
+       <div className="flex items-start space-x-3">
+         <img
+           src={item.user.avatar_url}
+           alt={item.user.login}
+           className="w-8 h-8 rounded-full flex-shrink-0"
+         />
+         <div className="flex-1 min-w-0">
+           <div className="flex items-center space-x-2 mb-2">
+             {item.type === "review" && getReviewIcon((item as Review).state)}
+             <span className="font-semibold">{item.user.login}</span>
+             {item.type === "review" && (
+               <span className="text-sm">
+                 {(item as Review).state === "APPROVED" &&
+                   "approved these changes"}
+                 {(item as Review).state === "CHANGES_REQUESTED" &&
+                   "requested changes"}
+                 {(item as Review).state === "COMMENTED" && "reviewed"}
+               </span>
+             )}
+             <span
+               className={cn(
+                 "text-sm",
+                 theme === "dark" ? "text-gray-500" : "text-gray-600",
+               )}
+             >
+               {formatDistanceToNow(new Date(item.timestamp), {
+                 addSuffix: true,
+               })}
+             </span>
+           </div>
+           {item.body && item.body.trim() && (
+             <div
+               className={cn(
+                 "overflow-hidden",
+                 theme === "dark" ? "text-gray-300" : "text-gray-700",
+               )}
+             >
+               <Markdown content={item.body} variant="full" />
+             </div>
+           )}
+         </div>
+       </div>
+     </div>
+   );
 }

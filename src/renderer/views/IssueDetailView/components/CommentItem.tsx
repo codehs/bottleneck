@@ -54,24 +54,24 @@ export const CommentItem = memo(function CommentItem({
       )}
     >
       <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center space-x-2">
-          <img
-            src={comment.user.avatar_url}
-            alt={comment.user.login}
-            className="w-6 h-6 rounded-full"
-          />
-          <span className="font-medium">{comment.user.login}</span>
-          <span
-            className={cn(
-              "text-sm",
-              theme === "dark" ? "text-gray-400" : "text-gray-600",
-            )}
-          >
-            {formatDistanceToNow(new Date(comment.created_at), {
-              addSuffix: true,
-            })}
-          </span>
-        </div>
+         <div className="flex items-center space-x-2 min-w-0">
+           <img
+             src={comment.user.avatar_url}
+             alt={comment.user.login}
+             className="w-6 h-6 rounded-full flex-shrink-0"
+           />
+           <span className="font-medium truncate">{comment.user.login}</span>
+           <span
+             className={cn(
+               "text-sm flex-shrink-0",
+               theme === "dark" ? "text-gray-400" : "text-gray-600",
+             )}
+           >
+             {formatDistanceToNow(new Date(comment.created_at), {
+               addSuffix: true,
+             })}
+           </span>
+         </div>
 
         {isAuthor && (
           <div className="relative">
@@ -159,7 +159,12 @@ export const CommentItem = memo(function CommentItem({
           </div>
         </div>
       ) : (
-        <MemoizedMarkdown content={comment.body} variant="compact" />
+        <div className={cn(
+          "overflow-hidden",
+          theme === "dark" ? "text-gray-300" : "text-gray-700"
+        )}>
+          <MemoizedMarkdown content={comment.body} variant="full" />
+        </div>
       )}
     </div>
   );

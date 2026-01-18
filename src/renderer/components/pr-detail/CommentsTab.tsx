@@ -294,37 +294,40 @@ export function CommentsTab({
                       : "recently";
 
                     return (
-                      <div key={comment.id} className="flex gap-3">
-                        <img
-                          src={comment.user.avatar_url}
-                          alt={comment.user.login}
-                          className="w-8 h-8 rounded-full"
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 text-xs">
-                            <span
-                              className={cn(
-                                "text-sm font-semibold",
-                                isDark ? "text-gray-100" : "text-gray-800",
-                              )}
-                            >
-                              {comment.user.login}
-                            </span>
-                            <span
-                              className={cn(
-                                "text-[11px]",
-                                isDark ? "text-gray-400" : "text-gray-500",
-                              )}
-                            >
-                              {relativeTime}
-                            </span>
-                          </div>
-                          <div className="mt-2 text-sm">
-                            <Markdown content={comment.body} variant="compact" />
-                          </div>
-                        </div>
-                      </div>
-                    );
+                       <div key={comment.id} className="flex gap-3">
+                         <img
+                           src={comment.user.avatar_url}
+                           alt={comment.user.login}
+                           className="w-8 h-8 rounded-full flex-shrink-0"
+                         />
+                         <div className="flex-1 min-w-0">
+                           <div className="flex items-center gap-2 text-xs">
+                             <span
+                               className={cn(
+                                 "text-sm font-semibold",
+                                 isDark ? "text-gray-100" : "text-gray-800",
+                               )}
+                             >
+                               {comment.user.login}
+                             </span>
+                             <span
+                               className={cn(
+                                 "text-[11px]",
+                                 isDark ? "text-gray-400" : "text-gray-500",
+                               )}
+                             >
+                               {relativeTime}
+                             </span>
+                           </div>
+                           <div className={cn(
+                             "mt-2 text-sm overflow-hidden",
+                             isDark ? "text-gray-300" : "text-gray-700"
+                           )}>
+                             <Markdown content={comment.body} variant="full" />
+                           </div>
+                         </div>
+                       </div>
+                     );
                   })}
                 </div>
 
