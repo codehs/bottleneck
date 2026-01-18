@@ -303,6 +303,23 @@ export class GitHubAPI {
     return this.getPullRequestsGraphQLLight(owner, repo, state);
   }
 
+  async getOpenAndDraftPullRequests(
+    owner: string,
+    repo: string,
+  ): Promise<PullRequest[]> {
+    // Fast sync: only open and draft PRs
+    return this.getPullRequestsGraphQLLight(owner, repo, "open");
+  }
+
+  async getRecentlyMergedPullRequests(
+    owner: string,
+    repo: string,
+    days: number = 30,
+  ): Promise<PullRequest[]> {
+    // Separate sync for recently merged PRs
+    return this.getPullRequestsGraphQLLightMerged(owner, repo, days);
+  }
+
   // Lightweight GraphQL query - only essential fields for list view
   private async getPullRequestsGraphQLLight(
     owner: string,
@@ -367,11 +384,9 @@ export class GitHubAPI {
     const pullRequests: PullRequest[] = [];
     let hasNextPage = true;
     let after: string | null = null;
-    let pageCount = 0;
-    const maxPages = 1; // Only fetch first page initially for fast load
 
     try {
-      while (hasNextPage && pageCount < maxPages) {
+      while (hasNextPage) {
         const response: any = await this.octokit.graphql(query, {
           owner,
           name: repo,
@@ -444,12 +459,6 @@ export class GitHubAPI {
             changesRequestedBy: [],
           });
         }
-
-        pageCount++;
-
-        // Only fetch first 100 PRs initially for fast load
-        // Users rarely need to see more than the most recent 100 PRs
-        // Additional pages can be fetched on-demand if needed
       }
     } catch (error) {
       console.error("GraphQL query failed, falling back to REST:", error);
@@ -460,6 +469,166 @@ export class GitHubAPI {
 
     console.log(`Fetched ${pullRequests.length} PRs via lightweight GraphQL`);
     console.timeEnd(`GraphQL fetch for ${owner}/${repo}`);
+    return pullRequests;
+  }
+
+  // Query for recently merged PRs
+  private async getPullRequestsGraphQLLightMerged(
+    owner: string,
+    repo: string,
+    days: number = 30,
+  ): Promise<PullRequest[]> {
+    console.time(`GraphQL merged PRs fetch for ${owner}/${repo}`);
+
+    // Calculate cutoff date
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffISO = cutoffDate.toISOString();
+
+    const query = `
+      query ($owner: String!, $name: String!, $after: String) {
+        repository(owner: $owner, name: $name) {
+          pullRequests(first: 100, after: $after, states: [MERGED], orderBy: {field: UPDATED_AT, direction: DESC}) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            nodes {
+              databaseId
+              number
+              title
+              body
+              state
+              isDraft
+              merged
+              mergeable
+              mergeCommit {
+                oid
+              }
+              headRefName
+              baseRefName
+              author {
+                login
+                avatarUrl
+              }
+              assignees(first: 5) {
+                nodes {
+                  login
+                  avatarUrl
+                }
+              }
+              labels(first: 10) {
+                nodes {
+                  name
+                  color
+                }
+              }
+              createdAt
+              updatedAt
+              closedAt
+              mergedAt
+              changedFiles
+              additions
+              deletions
+            }
+          }
+        }
+      }
+    `;
+
+    const pullRequests: PullRequest[] = [];
+    let hasNextPage = true;
+    let after: string | null = null;
+
+    try {
+      while (hasNextPage) {
+        const response: any = await this.octokit.graphql(query, {
+          owner,
+          name: repo,
+          after,
+        });
+
+        const prData = response?.repository?.pullRequests;
+        if (!prData) break;
+
+        hasNextPage = prData.pageInfo.hasNextPage;
+        after = prData.pageInfo.endCursor;
+
+        for (const pr of prData.nodes) {
+          if (!pr) continue;
+
+          // Skip PRs merged before cutoff
+          const mergedDate = pr.mergedAt ? new Date(pr.mergedAt) : null;
+          if (mergedDate && mergedDate < cutoffDate) {
+            hasNextPage = false; // Stop pagination since older PRs won't be needed
+            break;
+          }
+
+          pullRequests.push({
+            id: pr.databaseId ?? pr.number,
+            number: pr.number,
+            title: pr.title,
+            body: pr.body || "",
+            state: pr.state.toLowerCase() as "open" | "closed",
+            draft: pr.isDraft || false,
+            merged: pr.merged || false,
+            mergeable: pr.mergeable === "MERGEABLE" ? true : pr.mergeable === "CONFLICTING" ? false : null,
+            merge_commit_sha: pr.mergeCommit?.oid || null,
+            head: {
+              ref: pr.headRefName || "",
+              sha: "",
+              repo: {
+                name: repo,
+                owner: {
+                  login: owner,
+                },
+              },
+            },
+            base: {
+              ref: pr.baseRefName || "",
+              sha: "",
+              repo: {
+                name: repo,
+                owner: {
+                  login: owner,
+                },
+              },
+            },
+            user: {
+              login: pr.author?.login || "ghost",
+              avatar_url: pr.author?.avatarUrl || "",
+            },
+            assignees: pr.assignees?.nodes?.map((a: any) => ({
+              login: a.login,
+              avatar_url: a.avatarUrl,
+            })) || [],
+            requested_reviewers: [],
+            labels: pr.labels?.nodes?.map((l: any) => ({
+              name: l.name,
+              color: l.color,
+            })) || [],
+            comments: 0,
+            created_at: pr.createdAt,
+            updated_at: pr.updatedAt,
+            closed_at: pr.closedAt,
+            merged_at: pr.mergedAt,
+            changed_files: pr.changedFiles ?? 0,
+            additions: pr.additions ?? 0,
+            deletions: pr.deletions ?? 0,
+            approvalStatus: "none" as const,
+            approvedBy: [],
+            changesRequestedBy: [],
+          });
+        }
+      }
+    } catch (error) {
+      console.error("GraphQL merged PRs query failed:", error);
+      console.timeEnd(`GraphQL merged PRs fetch for ${owner}/${repo}`);
+      throw error;
+    }
+
+    console.log(`Fetched ${pullRequests.length} merged PRs via GraphQL`);
+    console.timeEnd(`GraphQL merged PRs fetch for ${owner}/${repo}`);
     return pullRequests;
   }
 
@@ -541,13 +710,6 @@ export class GitHubAPI {
 
         // Stop if we got less than a full page
         if (data.length < perPage) break;
-
-        // Limit total PRs to avoid excessive API calls
-        // Frontend will handle filtering, so we don't need all PRs
-        if (pullRequests.length >= 300) {
-          console.log(`Fetched ${pullRequests.length} PRs, stopping pagination for performance`);
-          break;
-        }
 
         page++;
       }

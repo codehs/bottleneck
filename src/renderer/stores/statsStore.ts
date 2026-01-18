@@ -1,273 +1,166 @@
 import { create } from "zustand";
 import { PullRequest } from "../services/github";
 
-export interface RepoStats {
-  repo: string;
-  owner: string;
-  open: number;
-  draft: number;
-  inReview: number;
-  approved: number;
-  closed: number;
-  merged: number;
-  totalPRs: number;
+export interface CurrentSnapshot {
+  totalOpen: number;
+  totalDraft: number;
+  reviewedByPerson: Map<string, { name: string; avatarUrl?: string; reviewCount: number }>;
 }
 
-export interface PersonStats {
-  name: string;
-  avatarUrl?: string;
-  totalPRs: number;
-  open: number;
-  merged: number;
-  closed: number;
-  draft: number;
-}
-
-export interface ReviewerStats {
-  name: string;
-  avatarUrl?: string;
-  pendingReviews: number;
-  approved: number;
-  changesRequested: number;
-  dismissed: number;
-}
-
-export interface StatsFilters {
-  timeRange: 'week' | 'month' | 'quarter' | 'all';
-  selectedRepos: string[]; // Format: "owner/repo"
+export interface ActivityPeriod {
+  label: string;
+  days: number;
+  merged: Map<string, { name: string; avatarUrl?: string; count: number }>;
+  reviewed: Map<string, { name: string; avatarUrl?: string; count: number }>;
 }
 
 interface StatsState {
-  repoStats: Map<string, RepoStats>;
-  personStats: Map<string, PersonStats>;
-  reviewerStats: Map<string, ReviewerStats>;
-  filters: StatsFilters;
+  currentSnapshot: CurrentSnapshot | null;
+  activity: ActivityPeriod[];
   loading: boolean;
 
   // Actions
   calculateStats: (pullRequests: Map<string, PullRequest>) => void;
-  setTimeRange: (range: StatsFilters['timeRange']) => void;
-  setSelectedRepos: (repos: string[]) => void;
-  clearFilters: () => void;
-  getFilteredStats: () => {
-    repos: RepoStats[];
-    people: PersonStats[];
-    reviewers: ReviewerStats[];
-  };
 }
 
-const DEFAULT_FILTERS: StatsFilters = {
-  timeRange: 'month',
-  selectedRepos: [],
-};
-
-export const useStatsStore = create<StatsState>((set, get) => ({
-  repoStats: new Map(),
-  personStats: new Map(),
-  reviewerStats: new Map(),
-  filters: DEFAULT_FILTERS,
+export const useStatsStore = create<StatsState>((set) => ({
+  currentSnapshot: null,
+  activity: [],
   loading: false,
 
   calculateStats: (pullRequests: Map<string, PullRequest>) => {
     set({ loading: true });
 
-    const repoMap = new Map<string, RepoStats>();
-    const personMap = new Map<string, PersonStats>();
-    const reviewerMap = new Map<string, ReviewerStats>();
-
     const now = new Date();
-    const { timeRange, selectedRepos } = get().filters;
-    const filterDateMs = getFilterDate(now, timeRange).getTime();
-
-    pullRequests.forEach((pr) => {
-      const createdAt = new Date(pr.created_at).getTime();
-      const repoKey = `${pr.base.repo.owner.login}/${pr.base.repo.name}`;
-      
-      // Skip PRs outside time range
-      if (createdAt < filterDateMs) {
-        return;
-      }
-
-      if (selectedRepos.length > 0 && !selectedRepos.includes(repoKey)) {
-        return;
-      }
-
-      const authorName = pr.user.login;
-
-      // Update repo stats
-      if (!repoMap.has(repoKey)) {
-        repoMap.set(repoKey, {
-          repo: pr.base.repo.name,
-          owner: pr.base.repo.owner.login,
-          open: 0,
-          draft: 0,
-          inReview: 0,
-          approved: 0,
-          closed: 0,
-          merged: 0,
-          totalPRs: 0,
-        });
-      }
-
-      const repoStats = repoMap.get(repoKey)!;
-      repoStats.totalPRs++;
-
-      if (pr.merged_at) {
-        repoStats.merged++;
-      } else if (pr.state === 'closed') {
-        repoStats.closed++;
-      } else if (pr.draft) {
-        repoStats.draft++;
-      } else if (pr.approvedBy && pr.approvedBy.length > 0) {
-        repoStats.approved++;
-      } else if (pr.requested_reviewers && pr.requested_reviewers.length > 0) {
-        repoStats.inReview++;
-      } else {
-        repoStats.open++;
-      }
-
-      // Update person stats
-      if (!personMap.has(authorName)) {
-        personMap.set(authorName, {
-          name: authorName,
-          avatarUrl: pr.user.avatar_url,
-          totalPRs: 0,
-          open: 0,
-          merged: 0,
-          closed: 0,
-          draft: 0,
-        });
-      }
-
-      const personStats = personMap.get(authorName)!;
-      personStats.totalPRs++;
-
-      if (pr.merged_at) {
-        personStats.merged++;
-      } else if (pr.state === 'closed') {
-        personStats.closed++;
-      } else if (pr.draft) {
-        personStats.draft++;
-      } else {
-        personStats.open++;
-      }
-
-      // Count approved reviewers
-      if (pr.approvedBy && pr.approvedBy.length > 0) {
-        pr.approvedBy.forEach((reviewer) => {
-          const reviewerName = reviewer.login;
-
-          if (!reviewerMap.has(reviewerName)) {
-            reviewerMap.set(reviewerName, {
-              name: reviewerName,
-              avatarUrl: reviewer.avatar_url,
-              pendingReviews: 0,
-              approved: 0,
-              changesRequested: 0,
-              dismissed: 0,
-            });
-          }
-
-          reviewerMap.get(reviewerName)!.approved++;
-        });
-      }
-
-      // Count reviewers requesting changes
-      if (pr.changesRequestedBy && pr.changesRequestedBy.length > 0) {
-        pr.changesRequestedBy.forEach((reviewer) => {
-          const reviewerName = reviewer.login;
-
-          if (!reviewerMap.has(reviewerName)) {
-            reviewerMap.set(reviewerName, {
-              name: reviewerName,
-              avatarUrl: reviewer.avatar_url,
-              pendingReviews: 0,
-              approved: 0,
-              changesRequested: 0,
-              dismissed: 0,
-            });
-          }
-
-          reviewerMap.get(reviewerName)!.changesRequested++;
-        });
-      }
-
-      // Count pending reviews
-      if (pr.requested_reviewers && pr.requested_reviewers.length > 0) {
-        pr.requested_reviewers.forEach((reviewer) => {
-          const reviewerName = reviewer.login;
-
-          if (!reviewerMap.has(reviewerName)) {
-            reviewerMap.set(reviewerName, {
-              name: reviewerName,
-              avatarUrl: reviewer.avatar_url,
-              pendingReviews: 0,
-              approved: 0,
-              changesRequested: 0,
-              dismissed: 0,
-            });
-          }
-
-          reviewerMap.get(reviewerName)!.pendingReviews++;
-        });
-      }
-    });
+    const snapshot = calculateCurrentSnapshot(pullRequests);
+    const activity = calculateActivity(pullRequests, now);
 
     set({
-      repoStats: repoMap,
-      personStats: personMap,
-      reviewerStats: reviewerMap,
+      currentSnapshot: snapshot,
+      activity,
       loading: false,
     });
   },
-
-  setTimeRange: (range: StatsFilters['timeRange']) => {
-    set((state) => ({
-      filters: { ...state.filters, timeRange: range },
-    }));
-  },
-
-  setSelectedRepos: (repos: string[]) => {
-    set((state) => ({
-      filters: { ...state.filters, selectedRepos: repos },
-    }));
-  },
-
-  clearFilters: () => {
-    set({ filters: DEFAULT_FILTERS });
-  },
-
-  getFilteredStats: () => {
-    const state = get();
-    const selectedRepos = state.filters.selectedRepos;
-
-    let repos = Array.from(state.repoStats.values());
-    if (selectedRepos.length > 0) {
-      repos = repos.filter((r) => selectedRepos.includes(`${r.owner}/${r.repo}`));
-    }
-
-    const people = Array.from(state.personStats.values());
-    const reviewers = Array.from(state.reviewerStats.values());
-
-    return { repos, people, reviewers };
-  },
 }));
 
-function getFilterDate(now: Date, range: StatsFilters['timeRange']): Date {
-  const date = new Date(now);
-  switch (range) {
-    case 'week':
-      date.setDate(date.getDate() - 7);
-      break;
-    case 'month':
-      date.setMonth(date.getMonth() - 1);
-      break;
-    case 'quarter':
-      date.setMonth(date.getMonth() - 3);
-      break;
-    case 'all':
-      date.setFullYear(1970); // Far in the past
-      break;
-  }
-  return date;
+function calculateCurrentSnapshot(pullRequests: Map<string, PullRequest>): CurrentSnapshot {
+  let totalOpen = 0;
+  let totalDraft = 0;
+  const reviewedByPerson = new Map<string, { name: string; avatarUrl?: string; reviewCount: number }>();
+
+  pullRequests.forEach((pr) => {
+    // Count current open and draft PRs
+    if (pr.state === 'open') {
+      if (pr.draft) {
+        totalDraft++;
+      } else {
+        totalOpen++;
+      }
+    }
+
+    // Count reviewers who have reviewed this PR (approved or changes requested)
+    if (pr.approvedBy) {
+      pr.approvedBy.forEach((reviewer) => {
+        const key = reviewer.login;
+        if (!reviewedByPerson.has(key)) {
+          reviewedByPerson.set(key, {
+            name: reviewer.login,
+            avatarUrl: reviewer.avatar_url,
+            reviewCount: 0,
+          });
+        }
+        reviewedByPerson.get(key)!.reviewCount++;
+      });
+    }
+
+    if (pr.changesRequestedBy) {
+      pr.changesRequestedBy.forEach((reviewer) => {
+        const key = reviewer.login;
+        if (!reviewedByPerson.has(key)) {
+          reviewedByPerson.set(key, {
+            name: reviewer.login,
+            avatarUrl: reviewer.avatar_url,
+            reviewCount: 0,
+          });
+        }
+        reviewedByPerson.get(key)!.reviewCount++;
+      });
+    }
+  });
+
+  return {
+    totalOpen,
+    totalDraft,
+    reviewedByPerson,
+  };
+}
+
+function calculateActivity(pullRequests: Map<string, PullRequest>, now: Date): ActivityPeriod[] {
+  const periods: ActivityPeriod[] = [
+    { label: '1 day', days: 1, merged: new Map(), reviewed: new Map() },
+    { label: '7 days', days: 7, merged: new Map(), reviewed: new Map() },
+    { label: '30 days', days: 30, merged: new Map(), reviewed: new Map() },
+  ];
+
+  pullRequests.forEach((pr) => {
+    periods.forEach((period) => {
+      const cutoffDate = new Date(now);
+      cutoffDate.setDate(cutoffDate.getDate() - period.days);
+
+      // Check if PR was merged in this period
+      if (pr.merged_at) {
+        const mergedDate = new Date(pr.merged_at);
+        if (mergedDate >= cutoffDate && mergedDate <= now) {
+          const authorKey = pr.user.login;
+          if (!period.merged.has(authorKey)) {
+            period.merged.set(authorKey, {
+              name: pr.user.login,
+              avatarUrl: pr.user.avatar_url,
+              count: 0,
+            });
+          }
+          period.merged.get(authorKey)!.count++;
+        }
+      }
+
+      // Check if PR was reviewed in this period (approved or changes requested)
+      if (pr.approvedBy) {
+        pr.approvedBy.forEach((reviewer) => {
+          // For simplicity, use the PR's updated_at as the review timestamp
+          // In a real app, you'd have individual review timestamps
+          const reviewDate = new Date(pr.updated_at);
+          if (reviewDate >= cutoffDate && reviewDate <= now) {
+            const reviewerKey = reviewer.login;
+            if (!period.reviewed.has(reviewerKey)) {
+              period.reviewed.set(reviewerKey, {
+                name: reviewer.login,
+                avatarUrl: reviewer.avatar_url,
+                count: 0,
+              });
+            }
+            period.reviewed.get(reviewerKey)!.count++;
+          }
+        });
+      }
+
+      if (pr.changesRequestedBy) {
+        pr.changesRequestedBy.forEach((reviewer) => {
+          const reviewDate = new Date(pr.updated_at);
+          if (reviewDate >= cutoffDate && reviewDate <= now) {
+            const reviewerKey = reviewer.login;
+            if (!period.reviewed.has(reviewerKey)) {
+              period.reviewed.set(reviewerKey, {
+                name: reviewer.login,
+                avatarUrl: reviewer.avatar_url,
+                count: 0,
+              });
+            }
+            period.reviewed.get(reviewerKey)!.count++;
+          }
+        });
+      }
+    });
+  });
+
+  return periods;
 }

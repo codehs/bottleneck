@@ -294,8 +294,17 @@ export const usePRStore = create<PRState>((set, get) => {
           prs = mockPullRequests as PullRequest[];
         } else {
           const api = new GitHubAPI(token);
-          prs = await api.getPullRequests(owner, repo, "all");
-          console.log("Fetched PRs from API:", prs);
+          
+          // Fetch open and draft PRs first (fast sync)
+          const openPRs = await api.getOpenAndDraftPullRequests(owner, repo);
+          console.log("Fetched open/draft PRs from API:", openPRs.length);
+          
+          // Fetch recently merged PRs (last 30 days)
+          const mergedPRs = await api.getRecentlyMergedPullRequests(owner, repo, 30);
+          console.log("Fetched merged PRs from API:", mergedPRs.length);
+          
+          // Combine both
+          prs = [...openPRs, ...mergedPRs];
         }
 
         const prMap = new Map<string, PullRequest>();
