@@ -143,6 +143,16 @@ const commands: Command[] = [
     preview: <div>Open issues list</div>,
   },
   {
+    id: "nav-me",
+    name: "Go to Me",
+    keywords: "navigate me profile assignments",
+    action: () => {
+      const nav = window.__commandNavigate;
+      if (nav) nav("/me");
+    },
+    preview: <div>View your pull request inbox</div>,
+  },
+  {
     id: "nav-stats",
     name: "Go to Statistics",
     keywords: "navigate stats analytics metrics dashboard",
