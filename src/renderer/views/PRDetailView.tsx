@@ -127,7 +127,18 @@ export default function PRDetailView() {
   useEffect(() => {
     // Load data even without token if in dev mode
     if (!window.electron || (owner && repo && number)) {
-      loadPRData();
+      const prNumber = parseInt(number ?? "0", 10);
+      const prKey = owner && repo ? `${owner}/${repo}#${prNumber}` : null;
+      const cachedPR = prKey
+        ? usePRStore.getState().pullRequests.get(prKey)
+        : undefined;
+
+      if (cachedPR) {
+        setPR(cachedPR);
+        setLoading(false);
+      }
+
+      loadPRData({ background: Boolean(cachedPR) });
     }
 
     // Load current user if we have a token
@@ -146,6 +157,11 @@ export default function PRDetailView() {
 
   useEffect(() => {
     setFiles([]);
+    setComments([]);
+    setCommits([]);
+    setReviews([]);
+    setReviewComments([]);
+    setReviewThreads([]);
     setSelectedFile(null);
     setFileContent(null);
     setViewedFiles(new Set<string>());
@@ -323,20 +339,13 @@ export default function PRDetailView() {
     handleFileSelect(files[0]);
   }, [files, selectedFile, handleFileSelect]);
 
-  const loadPRData = async () => {
+  const loadPRData = async (options: { background?: boolean } = {}) => {
     if (!owner || !repo || !number) {
       setLoading(false);
       return;
     }
 
-    // Set loading immediately and clear old data to prevent stale state
-    setLoading(true);
-    setFiles([]);
-    setComments([]);
-    setCommits([]);
-    setReviews([]);
-    setReviewComments([]);
-    setReviewThreads([]);
+    const { background = false } = options;
 
     const prNumber = parseInt(number);
     const prKey = `${owner}/${repo}#${prNumber}`;
@@ -344,6 +353,19 @@ export default function PRDetailView() {
     // Always fetch fresh PR data, but preserve protected fields from store
     const { pullRequests } = usePRStore.getState();
     const storedPR = pullRequests.get(prKey);
+    const shouldShowLoading = !background && !pr && !storedPR;
+
+    if (shouldShowLoading) {
+      setLoading(true);
+      setFiles([]);
+      setComments([]);
+      setCommits([]);
+      setReviews([]);
+      setReviewComments([]);
+      setReviewThreads([]);
+    } else if (!background) {
+      setLoading(false);
+    }
 
     try {
       // Use mock data if Electron API is not available
@@ -417,7 +439,9 @@ export default function PRDetailView() {
     } catch (error) {
       console.error("Failed to load PR data:", error);
     } finally {
-      setLoading(false);
+      if (shouldShowLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -441,7 +465,7 @@ export default function PRDetailView() {
 
     if (currentTimestamp !== lastHandledSyncTimeRef.current) {
       lastHandledSyncTimeRef.current = currentTimestamp;
-      loadPRDataRef.current();
+      loadPRDataRef.current({ background: true });
     }
   }, [isSyncing, lastSyncTime]);
 
@@ -489,7 +513,7 @@ export default function PRDetailView() {
       body,
     );
 
-    await loadPRData();
+    await loadPRData({ background: true });
   };
 
   const handleThreadResolve = async (threadId: string) => {
@@ -550,7 +574,7 @@ export default function PRDetailView() {
       );
 
       // Reload PR data to get the actual server state
-      await loadPRData();
+      await loadPRData({ background: true });
 
       console.log("Successfully approved PR #" + pr.number);
     } catch (error: any) {
@@ -643,7 +667,7 @@ export default function PRDetailView() {
       setRequestChangesFeedback("");
 
       // Reload PR data to get the actual server state
-      await loadPRData();
+      await loadPRData({ background: true });
 
       console.log("Successfully requested changes for PR #" + pr.number);
     } catch (error: any) {
@@ -704,7 +728,7 @@ export default function PRDetailView() {
       setShowMergeConfirm(false);
 
       // Reload PR data to get the complete server state
-      await loadPRData();
+      await loadPRData({ background: true });
     } catch (error) {
       console.error("Failed to merge PR:", error);
       alert(
