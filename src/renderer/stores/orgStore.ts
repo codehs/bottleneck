@@ -5,6 +5,7 @@ import { useAuthStore } from "./authStore";
 interface OrgMember {
   login: string;
   avatar_url: string;
+  name?: string;
 }
 
 interface OrgState {

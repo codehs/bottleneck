@@ -37,7 +37,7 @@ export const CommentForm = forwardRef<CommentFormRef, CommentFormProps>(function
   const [mentionQuery, setMentionQuery] = useState("");
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const [cursorPosition, setCursorPosition] = useState(0);
-  const [orgMembers, setOrgMembers] = useState<Array<{ login: string; avatar_url: string }>>([]);
+  const [orgMembers, setOrgMembers] = useState<Array<{ login: string; avatar_url: string; name?: string }>>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fetchOrgMembers = useOrgStore((state) => state.fetchOrgMembers);
 
@@ -58,11 +58,15 @@ export const CommentForm = forwardRef<CommentFormRef, CommentFormProps>(function
   // Get all potential mentions (all org members)
   const allMentionCandidates = orgMembers;
 
-  // Filter mention candidates based on query
+  // Filter mention candidates based on query (search both login and name)
   const filteredMentionCandidates = mentionQuery
-    ? allMentionCandidates.filter((candidate) =>
-        candidate.login.toLowerCase().includes(mentionQuery.toLowerCase())
-      )
+    ? allMentionCandidates.filter((candidate) => {
+        const query = mentionQuery.toLowerCase();
+        return (
+          candidate.login.toLowerCase().includes(query) ||
+          (candidate.name?.toLowerCase().includes(query) ?? false)
+        );
+      })
     : [];
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {

@@ -4,7 +4,7 @@ import { cn } from "../utils/cn";
 export interface MentionCandidate {
   login: string;
   avatar_url: string;
-  name?: string;
+  name?: string | null;
 }
 
 interface MentionTypeaheadProps {
@@ -75,7 +75,7 @@ export function MentionTypeahead({
           />
           <div className="flex-1 min-w-0">
             <div className="font-medium text-sm truncate">
-              {candidate.login}
+              {candidate.name || candidate.login}
             </div>
             {candidate.name && (
               <div
@@ -84,7 +84,7 @@ export function MentionTypeahead({
                   theme === "dark" ? "text-gray-400" : "text-gray-600",
                 )}
               >
-                {candidate.name}
+                @{candidate.login}
               </div>
             )}
           </div>

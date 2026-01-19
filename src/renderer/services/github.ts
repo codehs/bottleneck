@@ -2132,6 +2132,7 @@ export class GitHubAPI {
   async getOrganizationMembers(org: string): Promise<Array<{
     login: string;
     avatar_url: string;
+    name?: string;
   }>> {
     try {
       const { data } = await this.octokit.orgs.listMembers({
@@ -2142,6 +2143,7 @@ export class GitHubAPI {
       return data.map((member: any) => ({
         login: member.login,
         avatar_url: member.avatar_url,
+        name: member.name || undefined,
       }));
     } catch (error) {
       console.error(`Error fetching organization members for ${org}:`, error);
