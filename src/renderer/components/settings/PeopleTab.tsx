@@ -144,16 +144,14 @@ export default function PeopleTab() {
                 >
                   {member.name || member.login}
                 </div>
-                {member.name && (
-                  <div
-                    className={cn(
-                      "text-sm truncate",
-                      theme === "dark" ? "text-gray-400" : "text-gray-600",
-                    )}
-                  >
-                    @{member.login}
-                  </div>
-                )}
+                <div
+                  className={cn(
+                    "text-xs truncate",
+                    theme === "dark" ? "text-gray-400" : "text-gray-600",
+                  )}
+                >
+                  @{member.login}
+                </div>
               </div>
             </div>
           ))}
