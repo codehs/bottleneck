@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useOrgStore } from "../../stores/orgStore";
 import { useOrganizationSyncStore } from "../../stores/organizationSyncStore";
 import { useUIStore } from "../../stores/uiStore";
@@ -12,7 +12,10 @@ export default function PeopleTab() {
   const [loading, setLoading] = useState(true);
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
 
-  const enabledOrgs = organizations.filter((o) => o.isSyncing).map((o) => o.login);
+  const enabledOrgs = useMemo(
+    () => organizations.filter((o) => o.isSyncing).map((o) => o.login),
+    [organizations]
+  );
 
   useEffect(() => {
     const loadMembers = async () => {
