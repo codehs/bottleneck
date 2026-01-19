@@ -28,6 +28,7 @@ import { useUIStore } from "../stores/uiStore";
 import TeamManagementDialog from "../components/TeamManagementDialog";
 import { RepoFavoritesSection } from "../components/settings/RepoFavoritesSection";
 import PeopleTab from "../components/settings/PeopleTab";
+import OrganizationsTab from "../components/settings/OrganizationsTab";
 import { cn } from "../utils/cn";
 
 type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error';
@@ -48,7 +49,7 @@ export default function SettingsView() {
   } = useSettingsStore();
   const { theme } = useUIStore();
   const [activeTab, setActiveTab] = useState<
-    "general" | "appearance" | "notifications" | "advanced" | "teams" | "repositories" | "people"
+    "general" | "appearance" | "notifications" | "advanced" | "teams" | "repositories" | "people" | "organizations"
   >("general");
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -222,6 +223,7 @@ export default function SettingsView() {
     { id: "appearance", label: "Appearance", icon: Palette },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "repositories", label: "Repositories", icon: Star },
+    { id: "organizations", label: "Organizations", icon: Users },
     { id: "people", label: "People", icon: Users },
     { id: "teams", label: "Teams", icon: Users },
     { id: "advanced", label: "Advanced", icon: Code },
@@ -946,6 +948,10 @@ export default function SettingsView() {
             <div className="space-y-6">
               <RepoFavoritesSection />
             </div>
+          )}
+
+          {activeTab === "organizations" && (
+            <OrganizationsTab />
           )}
 
           {activeTab === "people" && (

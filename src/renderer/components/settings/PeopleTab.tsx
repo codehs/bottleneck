@@ -1,27 +1,27 @@
 import { useEffect, useState } from "react";
 import { useOrgStore } from "../../stores/orgStore";
-import { usePRStore } from "../../stores/prStore";
+import { useOrganizationSyncStore } from "../../stores/organizationSyncStore";
 import { useUIStore } from "../../stores/uiStore";
 import { cn } from "../../utils/cn";
 
 export default function PeopleTab() {
   const { theme } = useUIStore();
-  const { repositories } = usePRStore();
   const { fetchOrgMembers } = useOrgStore();
+  const { organizations } = useOrganizationSyncStore();
   const [members, setMembers] = useState<Array<{ login: string; avatar_url: string; name?: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
 
-  const orgs = Array.from(new Set(repositories.map((r) => r.owner)));
+  const enabledOrgs = organizations.filter((o) => o.isSyncing).map((o) => o.login);
 
   useEffect(() => {
     const loadMembers = async () => {
-      if (!selectedOrg && orgs.length === 0) {
+      if (!selectedOrg && enabledOrgs.length === 0) {
         setLoading(false);
         return;
       }
 
-      const org = selectedOrg || orgs[0];
+      const org = selectedOrg || enabledOrgs[0];
       if (!org) {
         setLoading(false);
         return;
@@ -40,7 +40,7 @@ export default function PeopleTab() {
     };
 
     loadMembers();
-  }, [selectedOrg, orgs, fetchOrgMembers]);
+  }, [selectedOrg, enabledOrgs, fetchOrgMembers]);
 
   if (loading) {
     return (
@@ -55,7 +55,7 @@ export default function PeopleTab() {
     );
   }
 
-  if (orgs.length === 0) {
+  if (enabledOrgs.length === 0) {
     return (
       <div
         className={cn(
@@ -63,7 +63,7 @@ export default function PeopleTab() {
           theme === "dark" ? "text-gray-400" : "text-gray-600",
         )}
       >
-        No organizations found. Start by adding repositories to view team members.
+        No enabled organizations. Go to the Organizations tab to enable organizations for viewing team members.
       </div>
     );
   }
@@ -80,7 +80,7 @@ export default function PeopleTab() {
           Team Members
         </h2>
         
-        {orgs.length > 1 && (
+        {enabledOrgs.length > 1 && (
           <div className="mb-4">
             <label
               className={cn(
@@ -100,7 +100,7 @@ export default function PeopleTab() {
                   : "bg-white border-gray-300 text-gray-900",
               )}
             >
-              {orgs.map((org) => (
+              {enabledOrgs.map((org) => (
                 <option key={org} value={org}>
                   {org}
                 </option>

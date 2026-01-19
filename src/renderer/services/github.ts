@@ -2150,4 +2150,23 @@ export class GitHubAPI {
       return [];
     }
   }
+
+  async getUserOrganizations(): Promise<Array<{
+    login: string;
+    avatar_url: string;
+  }>> {
+    try {
+      const { data } = await this.octokit.orgs.listForAuthenticatedUser({
+        per_page: 100,
+      });
+
+      return data.map((org: any) => ({
+        login: org.login,
+        avatar_url: org.avatar_url,
+      }));
+    } catch (error) {
+      console.error("Error fetching user organizations:", error);
+      return [];
+    }
+  }
 }
