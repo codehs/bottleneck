@@ -64,47 +64,60 @@ export const DiffEditorHeader: FC<DiffEditorHeaderProps> = ({
   return (
     <div
       className={cn(
-        "py-1 px-2 flex items-center justify-between border-b",
-        isDark ? "bg-gray-800 border-gray-700" : "bg-gray-50 border-gray-200",
+        "py-2 px-4 flex items-center justify-between border-b",
+        isDark ? "bg-gray-800 border-gray-700" : "bg-gray-50 border-gray-300",
       )}
     >
       <div className="flex items-center space-x-3">
-        <h3 className="font-mono text-xs flex items-center gap-2">
+        <h3 className="font-mono text-sm font-semibold flex items-center gap-2">
           {file.status === "added" && (
-            <FilePlus className="w-4 h-4 text-green-500" />
+            <FilePlus className="w-4 h-4 text-green-600" />
           )}
           {file.status === "removed" && (
-            <FileMinus className="w-4 h-4 text-red-500" />
+            <FileMinus className="w-4 h-4 text-red-600" />
           )}
           {file.status === "modified" && (
-            <FileEdit className="w-4 h-4 text-yellow-500" />
+            <FileEdit className="w-4 h-4 text-orange-500" />
           )}
-          {file.filename}
+          <span className={isDark ? "text-gray-100" : "text-gray-900"}>
+            {file.filename}
+          </span>
         </h3>
         <div className="flex items-center space-x-2 text-xs">
           {file.status === "added" ? (
-            <span className="text-green-500 font-medium">
+            <span className={isDark ? "text-green-400" : "text-green-600"}>
               {file.additions === 0 && file.deletions === 0
                 ? "New file"
-                : `New file (+${file.additions} lines)`}
+                : `+${file.additions}`}
             </span>
           ) : file.status === "removed" ? (
-            <span className="text-red-500 font-medium">
-              Deleted (-{file.deletions} lines)
+            <span className={isDark ? "text-red-400" : "text-red-600"}>
+              -{file.deletions}
             </span>
           ) : (
             <>
               {isImage && hasNoLineChanges ? (
-                <span className="text-yellow-500 font-medium">Changed</span>
+                <span className={isDark ? "text-yellow-400" : "text-yellow-600"}>
+                  Changed
+                </span>
               ) : (
                 <>
-                  <span className="text-green-400">+{file.additions}</span>
-                  <span className="text-red-400">-{file.deletions}</span>
+                  <span className={isDark ? "text-green-400" : "text-green-600"}>
+                    +{file.additions}
+                  </span>
+                  <span className={isDark ? "text-red-400" : "text-red-600"}>
+                    -{file.deletions}
+                  </span>
                 </>
               )}
             </>
           )}
         </div>
+        {file.status === "modified" && !isImage && !hasNoLineChanges && (
+          <span className={isDark ? "text-gray-400" : "text-gray-600"}>
+            {file.filename.split(".").pop()?.toUpperCase()}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center space-x-2">

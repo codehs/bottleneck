@@ -53,15 +53,54 @@
     @apply bg-gray-800;
   }
 
-  /* Diff highlighting for unified view */
+  /* GitHub-style diff coloring in Monaco */
+  .monaco-editor .line-insert {
+    background-color: #e6ffec !important;
+  }
+
+  .monaco-editor .line-delete {
+    background-color: #ffebe9 !important;
+  }
+
+  .monaco-editor .char-insert {
+    background-color: #abf2bc !important;
+  }
+
+  .monaco-editor .char-delete {
+    background-color: #fdb8c0 !important;
+  }
+
+  .dark .monaco-editor .char-insert {
+    background-color: rgba(46, 160, 67, 0.4) !important;
+  }
+
+  .dark .monaco-editor .char-delete {
+    background-color: rgba(248, 81, 73, 0.4) !important;
+  }
+
+  .light .monaco-editor .line-insert {
+    background-color: #e6ffec !important;
+  }
+
+  .light .monaco-editor .line-delete {
+    background-color: #ffebe9 !important;
+  }
+
+  .dark .monaco-editor .line-insert {
+    background-color: rgba(46, 160, 67, 0.2) !important;
+  }
+
+  .dark .monaco-editor .line-delete {
+    background-color: rgba(248, 81, 73, 0.2) !important;
+  }
+
+  /* Diff highlighting for unified view - GitHub style */
   .diff-addition {
-    background-color: rgba(34, 197, 94, 0.1) !important;
-    border-left: 3px solid #22c55e;
+    background-color: #e6ffec !important;
   }
 
   .diff-deletion {
-    background-color: rgba(239, 68, 68, 0.1) !important;
-    border-left: 3px solid #ef4444;
+    background-color: #ffebe9 !important;
   }
 
   .monaco-editor .comment-thread-decoration,
@@ -347,15 +386,68 @@
   }
 
   .diff-addition {
-    @apply bg-green-900 bg-opacity-30;
+    @apply bg-[#e6ffec];
   }
 
   .diff-deletion {
-    @apply bg-red-900 bg-opacity-30;
+    @apply bg-[#ffebe9];
   }
 
   .diff-line-number {
     @apply text-gray-500 select-none;
+  }
+
+  /* GitHub-style diff file header */
+  .diff-file-header {
+    @apply bg-gray-100 border-b border-gray-300 px-4 py-2 rounded-t flex items-center justify-between;
+  }
+
+  .light .diff-file-header {
+    @apply bg-gray-50 border-gray-300;
+  }
+
+  .dark .diff-file-header {
+    @apply bg-gray-800 border-gray-700;
+  }
+
+  .diff-file-header-left {
+    @apply flex items-center gap-2;
+  }
+
+  .diff-file-header-icon {
+    @apply cursor-pointer text-gray-600;
+  }
+
+  .dark .diff-file-header-icon {
+    @apply text-gray-400;
+  }
+
+  .diff-file-path {
+    @apply font-mono text-sm font-semibold text-gray-900;
+  }
+
+  .dark .diff-file-path {
+    @apply text-gray-100;
+  }
+
+  .diff-change-badge {
+    @apply text-xs font-semibold ml-2;
+  }
+
+  .diff-change-addition {
+    @apply text-green-600;
+  }
+
+  .diff-change-deletion {
+    @apply text-red-600;
+  }
+
+  .diff-file-type {
+    @apply text-xs text-gray-500 ml-2;
+  }
+
+  .dark .diff-file-type {
+    @apply text-gray-400;
   }
 
   .dark .comment-thread {

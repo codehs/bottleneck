@@ -241,48 +241,49 @@ export function DiffEditor({
           />
         ) : shouldRenderEditor ? (
           <MonacoDiffEditor
-            key={file.filename}
-            original={
-              file.status === "added" ? "" : (effectiveOriginalContent || "")
-            }
-            modified={
-              file.status === "removed" ? "" : (effectiveModifiedContent || "")
-            }
-            language={language}
-            theme={theme === "dark" ? "vs-dark" : "vs"}
-            options={{
-              readOnly: true,
-              renderSideBySide: diffView === "split",
-              renderWhitespace: showWhitespace ? "all" : "none",
-              wordWrap: wordWrap ? "on" : "off",
-              minimap: { enabled: false },
-              scrollBeyondLastLine: false,
-              fontSize: 12,
-              lineHeight: 18,
-              renderLineHighlight: "none",
-              glyphMargin: false,
-              folding: true,
-              lineNumbers: "on",
-              lineDecorationsWidth: 22,
-              lineNumbersMinChars: 3,
-              renderValidationDecorations: "off",
-              scrollbar: {
-                vertical: "visible",
-                horizontal: "visible",
-                verticalScrollbarSize: 10,
-                horizontalScrollbarSize: 10,
-              },
-              hideUnchangedRegions: {
-                enabled: showFullFile && hideUnchangedRegions,
-                revealLineCount: 3,
-                minimumLineCount: 3,
-                contextLineCount: 3,
-              },
-              diffAlgorithm: "advanced",
-              ignoreTrimWhitespace: true,
-              renderIndicators: true,
-              enableSplitViewResizing: true,
-            }}
+             key={file.filename}
+             original={
+               file.status === "added" ? "" : (effectiveOriginalContent || "")
+             }
+             modified={
+               file.status === "removed" ? "" : (effectiveModifiedContent || "")
+             }
+             language={language}
+             theme={theme === "dark" ? "vs-dark" : "vs"}
+             options={{
+               readOnly: true,
+               renderSideBySide: diffView === "split",
+               renderWhitespace: showWhitespace ? "all" : "none",
+               wordWrap: wordWrap ? "on" : "off",
+               minimap: { enabled: false },
+               scrollBeyondLastLine: false,
+               fontSize: 12,
+               lineHeight: 18,
+               renderLineHighlight: "none",
+               glyphMargin: false,
+               folding: true,
+               lineNumbers: "on",
+               lineDecorationsWidth: 22,
+               lineNumbersMinChars: 3,
+               renderValidationDecorations: "off",
+               scrollbar: {
+                 vertical: "visible",
+                 horizontal: "visible",
+                 verticalScrollbarSize: 10,
+                 horizontalScrollbarSize: 10,
+               },
+               hideUnchangedRegions: {
+                 enabled: showFullFile && hideUnchangedRegions,
+                 revealLineCount: 3,
+                 minimumLineCount: 3,
+                 contextLineCount: 3,
+               },
+               diffAlgorithm: "advanced",
+               ignoreTrimWhitespace: true,
+               renderIndicators: true,
+               enableSplitViewResizing: true,
+               diffCodeLens: false,
+             }}
             onMount={(editor, monaco) => {
               diffEditorRef.current = editor;
               monacoRef.current = monaco;
