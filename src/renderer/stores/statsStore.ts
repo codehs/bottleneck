@@ -1,6 +1,17 @@
 import { create } from "zustand";
 import { PullRequest } from "../services/github";
 
+export interface PersonStats {
+  name: string;
+  login: string;
+  avatarUrl?: string;
+  totalPRs: number;
+  open: number;
+  draft: number;
+  merged: number;
+  closed: number;
+}
+
 export interface CurrentSnapshot {
   totalOpen: number;
   totalDraft: number;

@@ -71,11 +71,19 @@ export function PersonStatsSection({ people }: PersonStatsSectionProps) {
                     {person.avatarUrl && (
                       <img
                         src={person.avatarUrl}
-                        alt={person.name}
+                        alt={person.login}
                         className="w-6 h-6 rounded-full"
                       />
                     )}
-                    <span className="font-medium">{person.name}</span>
+                    <div>
+                      <div className="font-semibold text-sm">{person.name || person.login}</div>
+                      <div className={cn(
+                        "text-xs",
+                        theme === "dark" ? "text-gray-400" : "text-gray-600"
+                      )}>
+                        @{person.login}
+                      </div>
+                    </div>
                   </div>
                 </td>
                 <td className="text-right py-3 px-4">

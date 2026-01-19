@@ -7,7 +7,7 @@ export interface VercelDeployment {
 }
 
 export interface ParticipantStat {
-  user: { login: string; avatar_url: string };
+  user: { login: string; avatar_url: string; name?: string };
   role: string;
   comments: number;
   approvals: number;

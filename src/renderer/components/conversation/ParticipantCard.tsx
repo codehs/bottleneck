@@ -47,21 +47,25 @@ export function ParticipantCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="font-medium text-sm truncate flex items-center">
-                {participant.user.login}
-                {participant.isBot && (
-                  <span title="Bot account">
-                    <Bot className="w-3 h-3 ml-1 text-gray-500" />
-                  </span>
-                )}
+              <div className="flex items-center gap-1">
+                <div className="font-semibold text-sm truncate flex items-center">
+                  {participant.user.name || participant.user.login}
+                  {participant.isBot && (
+                    <span title="Bot account">
+                      <Bot className="w-3 h-3 ml-1 text-gray-500" />
+                    </span>
+                  )}
+                </div>
               </div>
               <div
                 className={cn(
-                  "text-xs",
+                  "text-xs space-x-1 flex items-center",
                   theme === "dark" ? "text-gray-400" : "text-gray-500",
                 )}
               >
-                {participant.role}
+                <span>@{participant.user.login}</span>
+                <span>•</span>
+                <span>{participant.role}</span>
               </div>
             </div>
             <div className="flex items-center space-x-1 flex-shrink-0">
