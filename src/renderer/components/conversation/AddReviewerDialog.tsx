@@ -8,7 +8,7 @@ interface AddReviewerDialogProps {
   onClose: () => void;
   onSelect: (username: string) => Promise<void>;
   participants: ParticipantStat[];
-  orgMembers?: Array<{ login: string; avatar_url: string }>;
+  orgMembers?: Array<{ login: string; avatar_url: string; name?: string }>;
   theme: "light" | "dark";
   prAuthor?: string;
   requestedReviewers?: string[];
@@ -35,6 +35,26 @@ function fuzzyMatch(query: string, text: string): number {
   }
   
   return queryIdx === q.length ? score : -1; // Return -1 if not all chars matched
+}
+
+// Calculate combined score for login + name matching
+function getCombinedMatchScore(query: string, login: string, name?: string | null): number {
+  const loginScore = fuzzyMatch(query, login);
+  
+  // If login matches, prefer it
+  if (loginScore >= 0) {
+    return loginScore;
+  }
+  
+  // If name exists and matches, give it a slight boost for name-specific matches
+  if (name) {
+    const nameScore = fuzzyMatch(query, name);
+    if (nameScore >= 0) {
+      return nameScore + 5; // Small boost for name matches to sort them slightly lower than login matches
+    }
+  }
+  
+  return -1;
 }
 
 export function AddReviewerDialog({
@@ -107,11 +127,11 @@ export function AddReviewerDialog({
       });
     }
 
-    // Score and filter based on fuzzy match
+    // Score and filter based on fuzzy match (both login and name)
     const scored = allReviewerCandidates
       .map((p) => ({
         ...p,
-        score: fuzzyMatch(searchQuery, p.user.login),
+        score: getCombinedMatchScore(searchQuery, p.user.login, p.user.name),
       }))
       .filter((p) => p.score >= 0)
       .sort((a, b) => {
@@ -297,8 +317,18 @@ export function AddReviewerDialog({
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
-                      {participant.user.login}
+                      {participant.user.name || participant.user.login}
                     </p>
+                    {participant.user.name && (
+                      <p
+                        className={cn(
+                          "text-xs truncate",
+                          theme === "dark" ? "text-gray-400" : "text-gray-500"
+                        )}
+                      >
+                        @{participant.user.login}
+                      </p>
+                    )}
                     <p
                       className={cn(
                         "text-xs truncate",
