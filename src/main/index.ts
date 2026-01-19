@@ -29,6 +29,9 @@ perfLog("Environment loaded (isDev=" + isDev + ")");
 const store = new Store();
 perfLog("Electron store initialized");
 
+// Set app name for macOS menu bar and app switcher
+app.name = "Bottleneck";
+
 let mainWindow: BrowserWindow | null = null;
 let githubAuth: GitHubAuth;
 let gitOps: GitOperations;
