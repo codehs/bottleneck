@@ -8,8 +8,10 @@ import { PRLabels } from "./conversation/PRLabels";
 import { TimelineItem } from "./conversation/TimelineItem";
 import { CommentForm, CommentFormRef, CommentSubmitResult } from "./conversation/CommentForm";
 import { ParticipantsSidebar } from "./conversation/ParticipantsSidebar";
-import { LabelsSidebar } from "./conversation/LabelsSidebar";
+import { AddLabelDialog } from "./conversation/AddLabelDialog";
 import { useParticipantStats } from "./conversation/useParticipantStats";
+import { useLabelStore } from "../stores/labelStore";
+import { useState, useEffect } from "react";
 
 interface ConversationTabProps {
   pr: PullRequest;
@@ -29,14 +31,81 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
   onCommentSubmit,
 }, ref) {
   const { user, token } = useAuthStore();
-  const { theme } = useUIStore();
+  const { theme, addLabelDialogOpen, setAddLabelDialogOpen } = useUIStore();
   const commentFormRef = useRef<CommentFormRef>(null);
+  const [availableLabels, setAvailableLabels] = useState<
+    Array<{ name: string; color: string; description?: string | null }>
+  >([]);
+  const [isLoadingLabels, setIsLoadingLabels] = useState(false);
 
   useImperativeHandle(ref, () => ({
     focusCommentForm: () => {
       commentFormRef.current?.focus();
     },
   }));
+
+  const addLabelAsync = async (labelName: string) => {
+    const { GitHubAPI } = await import("../services/github");
+    const { usePRStore } = await import("../stores/prStore");
+
+    const api = new GitHubAPI(token);
+
+    // Make API call to add label
+    await api.addLabels(
+      pr.base.repo.owner.login,
+      pr.base.repo.name,
+      pr.number,
+      [labelName]
+    );
+
+    // Update the store with optimistic update
+    const prStore = usePRStore.getState();
+    const key = `${pr.base.repo.owner.login}/${pr.base.repo.name}#${pr.number}`;
+    const currentPR = prStore.pullRequests.get(key);
+
+    if (currentPR) {
+      const updatedPR = {
+        ...currentPR,
+        labels: [
+          ...currentPR.labels,
+          {
+            name: labelName,
+            color: availableLabels.find((l) => l.name === labelName)?.color || "0366d6",
+          },
+        ],
+      };
+      prStore.updatePR(updatedPR);
+    }
+  };
+
+  const handleAddLabel = async (labelName: string) => {
+    try {
+      await addLabelAsync(labelName);
+    } catch (error) {
+      console.error("Failed to add label:", error);
+    }
+  };
+
+  // Fetch labels when dialog opens (cached by labelStore)
+  useEffect(() => {
+    if (addLabelDialogOpen && pr.base.repo.owner.login && pr.base.repo.name) {
+      setIsLoadingLabels(true);
+      (async () => {
+        try {
+          const { fetchLabels } = useLabelStore.getState();
+          const labels = await fetchLabels(
+            pr.base.repo.owner.login,
+            pr.base.repo.name
+          );
+          setAvailableLabels(labels);
+        } catch (error) {
+          console.error("Failed to fetch labels:", error);
+        } finally {
+          setIsLoadingLabels(false);
+        }
+      })();
+    }
+  }, [addLabelDialogOpen, pr.base.repo.owner.login, pr.base.repo.name]);
 
   // Calculate participant stats
   const participantStats = useParticipantStats(pr, comments, reviews);
@@ -83,7 +152,7 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
           <BranchInfo pr={pr} theme={theme} />
 
           {/* Labels */}
-          <PRLabels labels={pr.labels} theme={theme} />
+          {pr.labels.length > 0 && <PRLabels pr={pr} theme={theme} />}
 
           {/* Timeline */}
           <div className="space-y-4">
@@ -108,25 +177,27 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
         </div>
       </div>
 
-      {/* Right Sidebars */}
-      <div className="flex">
-        {/* Labels Sidebar */}
-        <LabelsSidebar
-          pr={pr}
-          theme={theme}
-        />
+      {/* Participants Sidebar */}
+      <ParticipantsSidebar
+        participants={participantStats}
+        theme={theme}
+        owner={pr.base.repo.owner.login}
+        repo={pr.base.repo.name}
+        prNumber={pr.number}
+        prAuthor={pr.user.login}
+        currentUser={user?.login}
+      />
 
-        {/* Participants Sidebar */}
-        <ParticipantsSidebar
-          participants={participantStats}
-          theme={theme}
-          owner={pr.base.repo.owner.login}
-          repo={pr.base.repo.name}
-          prNumber={pr.number}
-          prAuthor={pr.user.login}
-          currentUser={user?.login}
-        />
-      </div>
+      {/* Add Label Dialog */}
+      <AddLabelDialog
+        isOpen={addLabelDialogOpen}
+        onClose={() => setAddLabelDialogOpen(false)}
+        onSelect={handleAddLabel}
+        availableLabels={availableLabels}
+        selectedLabels={pr.labels.map((l) => l.name)}
+        theme={theme}
+        isLoadingLabels={isLoadingLabels}
+      />
     </div>
   );
 });

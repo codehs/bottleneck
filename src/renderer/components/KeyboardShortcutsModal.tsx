@@ -31,6 +31,7 @@ const SHORTCUTS = [
     category: "PR Actions",
     shortcuts: [
       { keys: ["Cmd", "Shift", "A"], description: "Approve PR" },
+      { keys: ["Cmd", "L"], description: "Add label" },
       { keys: ["Cmd", "Shift", "C"], description: "Focus comment box" },
       { keys: ["Cmd", "Shift", "H"], description: "Go to home (PR list)" },
     ],

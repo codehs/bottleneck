@@ -81,6 +81,16 @@ export function setupKeyboardShortcuts() {
         return;
       }
 
+      // Add label (Cmd/Ctrl + L) - only on PR detail page
+      if ((e.key === "l" || e.key === "L") && !e.shiftKey) {
+        const pathMatch = window.location.pathname.match(/^\/pulls\/([^/]+)\/([^/]+)\/(\d+)$/);
+        if (pathMatch) {
+          e.preventDefault();
+          useUIStore.getState().setAddLabelDialogOpen(true);
+          return;
+        }
+      }
+
       // Approve PR (Cmd/Ctrl + Shift + A)
       if ((e.key === "a" || e.key === "A") && e.shiftKey) {
         e.preventDefault();
