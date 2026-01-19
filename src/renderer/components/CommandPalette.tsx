@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, X, GitPullRequest, GitPullRequestDraft, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users } from "lucide-react";
+import { Search, X, GitPullRequest, GitPullRequestDraft, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users, Tag } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
 import { useSyncStore } from "../stores/syncStore";
@@ -252,6 +252,16 @@ export default function CommandPalette() {
           useUIStore.getState().setAddReviewersDialogOpen(true);
         },
         preview: <div>Open reviewer selection dialog</div>,
+      });
+      cmds.push({
+        id: "add-label",
+        name: "Add Label",
+        keywords: "label add tag",
+        icon: Tag,
+        action: () => {
+          useUIStore.getState().setAddLabelDialogOpen(true);
+        },
+        preview: <div>Open label selection dialog</div>,
       });
       cmds.push({
         id: "focus-comment",

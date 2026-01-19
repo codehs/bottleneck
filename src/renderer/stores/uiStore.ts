@@ -12,6 +12,7 @@ interface UIState {
   commandPaletteOpen: boolean;
   keyboardShortcutsOpen: boolean;
   addReviewersDialogOpen: boolean;
+  addLabelDialogOpen: boolean;
   selectedPRs: Set<string>;
   activeView: "list" | "detail";
   diffView: "unified" | "split";
@@ -42,6 +43,8 @@ interface UIState {
   toggleKeyboardShortcuts: () => void;
   toggleAddReviewersDialog: () => void;
   setAddReviewersDialogOpen: (open: boolean) => void;
+  toggleAddLabelDialog: () => void;
+  setAddLabelDialogOpen: (open: boolean) => void;
   toggleDiffView: () => void;
   toggleWhitespace: () => void;
   toggleWordWrap: () => void;
@@ -73,6 +76,7 @@ export const useUIStore = create<UIState>()(
       commandPaletteOpen: false,
       keyboardShortcutsOpen: false,
       addReviewersDialogOpen: false,
+      addLabelDialogOpen: false,
       selectedPRs: new Set(),
       activeView: "list",
       diffView: "split",
@@ -105,6 +109,12 @@ export const useUIStore = create<UIState>()(
         })),
       setAddReviewersDialogOpen: (open) =>
         set({ addReviewersDialogOpen: open }),
+      toggleAddLabelDialog: () =>
+        set((state) => ({
+          addLabelDialogOpen: !state.addLabelDialogOpen,
+        })),
+      setAddLabelDialogOpen: (open) =>
+        set({ addLabelDialogOpen: open }),
       toggleDiffView: () =>
         set((state) => ({
           diffView: state.diffView === "unified" ? "split" : "unified",

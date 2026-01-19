@@ -8,6 +8,7 @@ import { PRLabels } from "./conversation/PRLabels";
 import { TimelineItem } from "./conversation/TimelineItem";
 import { CommentForm, CommentFormRef, CommentSubmitResult } from "./conversation/CommentForm";
 import { ParticipantsSidebar } from "./conversation/ParticipantsSidebar";
+import { LabelsSidebar } from "./conversation/LabelsSidebar";
 import { useParticipantStats } from "./conversation/useParticipantStats";
 
 interface ConversationTabProps {
@@ -107,16 +108,25 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
         </div>
       </div>
 
-      {/* Participants Sidebar */}
-      <ParticipantsSidebar
-        participants={participantStats}
-        theme={theme}
-        owner={pr.base.repo.owner.login}
-        repo={pr.base.repo.name}
-        prNumber={pr.number}
-        prAuthor={pr.user.login}
-        currentUser={user?.login}
-      />
+      {/* Right Sidebars */}
+      <div className="flex">
+        {/* Labels Sidebar */}
+        <LabelsSidebar
+          pr={pr}
+          theme={theme}
+        />
+
+        {/* Participants Sidebar */}
+        <ParticipantsSidebar
+          participants={participantStats}
+          theme={theme}
+          owner={pr.base.repo.owner.login}
+          repo={pr.base.repo.name}
+          prNumber={pr.number}
+          prAuthor={pr.user.login}
+          currentUser={user?.login}
+        />
+      </div>
     </div>
   );
 });
