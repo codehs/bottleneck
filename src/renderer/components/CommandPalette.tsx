@@ -302,6 +302,12 @@ export default function CommandPalette() {
       const starredRepos = repositories.filter((repo) => {
         const repoKey = repo.full_name || `${repo.owner}/${repo.name}`;
         return favorites.some((f) => f.repoKey === repoKey || f.repoKey === `${repo.owner}/${repo.name}`);
+      }).sort((a, b) => {
+        const aKey = a.full_name || `${a.owner}/${a.name}`;
+        const bKey = b.full_name || `${b.owner}/${b.name}`;
+        const aFav = favorites.find((f) => f.repoKey === aKey || f.repoKey === `${a.owner}/${a.name}`);
+        const bFav = favorites.find((f) => f.repoKey === bKey || f.repoKey === `${b.owner}/${b.name}`);
+        return (aFav?.sortOrder ?? 999) - (bFav?.sortOrder ?? 999);
       });
 
       if (starredRepos.length > 0) {
