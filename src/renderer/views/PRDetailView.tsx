@@ -187,6 +187,9 @@ export default function PRDetailView() {
         console.error("Failed to add shipit label:", error);
       }
     };
+    const onResync = () => {
+      window.dispatchEvent(new CustomEvent("pr-internal:do-resync"));
+    };
 
     window.addEventListener("pr-action:approve", onApprove);
     window.addEventListener("pr-action:focus-comment", onFocusComment);
@@ -194,6 +197,7 @@ export default function PRDetailView() {
     window.addEventListener("pr-action:navigate-previous", onNavigatePrevious);
     window.addEventListener("pr-action:navigate-next", onNavigateNext);
     window.addEventListener("pr-action:ship-it", onShipIt);
+    window.addEventListener("pr-action:resync", onResync);
     
     return () => {
       window.removeEventListener("pr-action:approve", onApprove);
@@ -202,8 +206,25 @@ export default function PRDetailView() {
       window.removeEventListener("pr-action:navigate-previous", onNavigatePrevious);
       window.removeEventListener("pr-action:navigate-next", onNavigateNext);
       window.removeEventListener("pr-action:ship-it", onShipIt);
+      window.removeEventListener("pr-action:resync", onResync);
     };
   }, [pr, navigationState, owner, repo, number, token]);
+
+  // Handler for internal resync event (triggered by command palette)
+  useEffect(() => {
+    const handleInternalResync = () => {
+      if (!isResyncing) {
+        setIsResyncing(true);
+        loadPRData({ background: true }).finally(() => {
+          setIsResyncing(false);
+        });
+      }
+    };
+    window.addEventListener("pr-internal:do-resync", handleInternalResync);
+    return () => {
+      window.removeEventListener("pr-internal:do-resync", handleInternalResync);
+    };
+  }, [isResyncing]);
 
   useEffect(() => {
     // Load data even without token if in dev mode

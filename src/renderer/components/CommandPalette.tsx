@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, X, GitPullRequest, GitPullRequestDraft, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users, Tag, Ship } from "lucide-react";
+import { Search, X, GitPullRequest, GitPullRequestDraft, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users, Tag, Ship, RefreshCw } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
 import { useSyncStore } from "../stores/syncStore";
@@ -304,6 +304,16 @@ export default function CommandPalette() {
           window.dispatchEvent(new CustomEvent("pr-action:ship-it"));
         },
         preview: <div>Approve PR and add the "shipit" label</div>,
+      });
+      cmds.push({
+        id: "resync-pr",
+        name: "Resync PR",
+        keywords: "resync refresh reload sync fetch update",
+        icon: RefreshCw,
+        action: () => {
+          window.dispatchEvent(new CustomEvent("pr-action:resync"));
+        },
+        preview: <div>Refresh this PR's data from GitHub</div>,
       });
     }
 
