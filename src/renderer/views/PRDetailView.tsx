@@ -212,19 +212,25 @@ export default function PRDetailView() {
 
   // Handler for internal resync event (triggered by command palette)
   useEffect(() => {
-    const handleInternalResync = () => {
-      if (!isResyncing) {
+    const handleInternalResync = async () => {
+      if (!isResyncing && owner && repo) {
         setIsResyncing(true);
-        loadPRData({ background: true }).finally(() => {
+        try {
+          const { useLabelStore } = await import("../stores/labelStore");
+          await Promise.all([
+            loadPRData({ background: true }),
+            useLabelStore.getState().fetchLabels(owner, repo, true),
+          ]);
+        } finally {
           setIsResyncing(false);
-        });
+        }
       }
     };
     window.addEventListener("pr-internal:do-resync", handleInternalResync);
     return () => {
       window.removeEventListener("pr-internal:do-resync", handleInternalResync);
     };
-  }, [isResyncing]);
+  }, [isResyncing, owner, repo]);
 
   useEffect(() => {
     // Load data even without token if in dev mode
@@ -643,10 +649,14 @@ export default function PRDetailView() {
   };
 
   const handleResync = async () => {
-    if (isResyncing) return;
+    if (isResyncing || !owner || !repo) return;
     setIsResyncing(true);
     try {
-      await loadPRData({ background: true });
+      const { useLabelStore } = await import("../stores/labelStore");
+      await Promise.all([
+        loadPRData({ background: true }),
+        useLabelStore.getState().fetchLabels(owner, repo, true),
+      ]);
     } finally {
       setIsResyncing(false);
     }
