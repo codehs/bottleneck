@@ -605,36 +605,36 @@ export function PRTreeView({
                           )}
 
                           {/* Labels */}
-                          {item.data.pr.labels && item.data.pr.labels.length > 0 && (
-                            <div className="flex items-center gap-1">
-                              {item.data.pr.labels.slice(0, 3).map((label) => {
-                                const labelColors = getLabelColors(label.color, theme);
-                                return (
-                                  <span
-                                    key={label.name}
-                                    className="px-1 rounded text-[10px] font-medium opacity-80 leading-tight"
-                                    style={{
-                                      backgroundColor: labelColors.backgroundColor,
-                                      color: labelColors.color,
-                                    }}
-                                    title={label.name}
-                                  >
-                                    {label.name.length > 20 ? `${label.name.slice(0, 20)}…` : label.name}
-                                  </span>
-                                );
-                              })}
-                              {item.data.pr.labels.length > 3 && (
-                                <span
-                                  className={cn(
-                                    "text-[10px]",
-                                    theme === "dark" ? "text-gray-500" : "text-gray-400"
-                                  )}
-                                >
-                                  +{item.data.pr.labels.length - 3}
-                                </span>
-                              )}
-                            </div>
-                          )}
+                           {item.data.pr.labels && item.data.pr.labels.length > 0 && (
+                             <div className="flex items-center gap-2">
+                               {item.data.pr.labels.slice(0, 3).map((label) => {
+                                 const labelColors = getLabelColors(label.color, theme);
+                                 return (
+                                   <span
+                                     key={label.name}
+                                     className="px-2 py-0.5 rounded text-xs font-medium opacity-80"
+                                     style={{
+                                       backgroundColor: labelColors.backgroundColor,
+                                       color: labelColors.color,
+                                     }}
+                                     title={label.name}
+                                   >
+                                     {label.name.length > 20 ? `${label.name.slice(0, 20)}…` : label.name}
+                                   </span>
+                                 );
+                               })}
+                               {item.data.pr.labels.length > 3 && (
+                                 <span
+                                   className={cn(
+                                     "text-xs",
+                                     theme === "dark" ? "text-gray-500" : "text-gray-400"
+                                   )}
+                                 >
+                                   +{item.data.pr.labels.length - 3}
+                                 </span>
+                               )}
+                             </div>
+                           )}
                         </div>
                       )}
                     </div>
