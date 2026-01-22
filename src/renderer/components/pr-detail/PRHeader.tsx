@@ -12,6 +12,7 @@ import {
   XCircle,
   Clock,
   ExternalLink,
+  RefreshCw,
 } from "lucide-react";
 import { PullRequest } from "../../services/github";
 import { formatDistanceToNow } from "date-fns";
@@ -35,6 +36,8 @@ interface PRHeaderProps {
   onMerge: () => void;
   onToggleDraft?: () => void;
   isTogglingDraft?: boolean;
+  onResync?: () => void;
+  isResyncing?: boolean;
 }
 
 export function PRHeader({
@@ -48,6 +51,8 @@ export function PRHeader({
   onMerge,
   onToggleDraft,
   isTogglingDraft,
+  onResync,
+  isResyncing,
 }: PRHeaderProps) {
   const navigate = useNavigate();
   const [showCheckoutDropdown, setShowCheckoutDropdown] = useState(false);
@@ -144,6 +149,18 @@ export function PRHeader({
               />
             )}
           </div>
+
+          {onResync && (
+            <button
+              onClick={onResync}
+              disabled={isResyncing}
+              className="btn btn-secondary text-xs flex items-center"
+              title="Resync this PR"
+            >
+              <RefreshCw className={cn("w-3 h-3 mr-1", isResyncing && "animate-spin")} />
+              {isResyncing ? "Syncing..." : "Resync"}
+            </button>
+          )}
 
           {pr.state === "open" && !pr.merged && (
             <>

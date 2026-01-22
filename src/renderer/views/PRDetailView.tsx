@@ -99,6 +99,7 @@ export default function PRDetailView() {
   } | null>(null);
   const [showRequestChangesModal, setShowRequestChangesModal] = useState(false);
   const [requestChangesFeedback, setRequestChangesFeedback] = useState("");
+  const [isResyncing, setIsResyncing] = useState(false);
   const conversationTabRef = useRef<ConversationTabRef>(null);
 
   // Listen for PR action events from command palette
@@ -620,6 +621,16 @@ export default function PRDetailView() {
     );
   };
 
+  const handleResync = async () => {
+    if (isResyncing) return;
+    setIsResyncing(true);
+    try {
+      await loadPRData({ background: true });
+    } finally {
+      setIsResyncing(false);
+    }
+  };
+
   const handleApprove = async () => {
     if (!pr || !token || !owner || !repo || !currentUser) return;
 
@@ -992,6 +1003,8 @@ export default function PRDetailView() {
         onMerge={() => setShowMergeConfirm(true)}
         onToggleDraft={handleToggleDraft}
         isTogglingDraft={pr.isTogglingDraft || false}
+        onResync={handleResync}
+        isResyncing={isResyncing}
       />
 
       {/* Tabs */}
