@@ -13,7 +13,7 @@ export interface ParsedURL {
 export function extractURLsFromText(text: string): ParsedURL[] {
   if (!text) return [];
   
-  const urlRegex = /(https?:\/\/[^\s\)]+)/gi;
+  const urlRegex = /(https?:\/\/[^\s\)\]\[]+)/gi;
   const matches = text.match(urlRegex) || [];
   
   // Remove duplicates and clean up URLs
@@ -21,23 +21,10 @@ export function extractURLsFromText(text: string): ParsedURL[] {
   
   return uniqueUrls.map((url) => {
     // Remove trailing punctuation that's likely not part of the URL
-    let cleanUrl = url.replace(/[.,;:!?\)]+$/, '');
+    let cleanUrl = url.replace(/[.,;:!?\)\]\[]+$/, '');
     
-    // Try to extract a human-readable label from the URL
-    let label = cleanUrl;
-    try {
-      const urlObj = new URL(cleanUrl);
-      const hostname = urlObj.hostname.replace('www.', '');
-      const path = urlObj.pathname.split('/').filter(Boolean);
-      
-      if (path.length > 0) {
-        label = `${hostname}/${path.slice(0, 2).join('/')}`;
-      } else {
-        label = hostname;
-      }
-    } catch (e) {
-      // Keep original URL as label if parsing fails
-    }
+    // Use the full URL as the label for simplicity
+    const label = cleanUrl;
     
     return { url: cleanUrl, label };
   });

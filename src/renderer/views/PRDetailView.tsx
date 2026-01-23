@@ -121,7 +121,7 @@ export default function PRDetailView() {
       // Trigger the "open-urls" command in the palette
       // This will be handled by a mechanism that triggers the command within the palette
       // First, open the command palette, then simulate opening the URL mode
-      window.dispatchEvent(new CustomEvent("pr-action:trigger-url-mode", { detail: { pr } }));
+      window.dispatchEvent(new CustomEvent("pr-action:trigger-url-mode", { detail: { pr, comments, reviews } }));
     };
     const onNavigatePrevious = () => {
       if (navigationState?.siblingPRs && navigationState.siblingPRs.length > 0) {

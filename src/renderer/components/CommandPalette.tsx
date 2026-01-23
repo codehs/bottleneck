@@ -210,8 +210,10 @@ export default function CommandPalette() {
      const handleTriggerURLMode = (e: Event) => {
        const customEvent = e as CustomEvent;
        const pr = customEvent.detail?.pr;
+       const comments = customEvent.detail?.comments;
+       const reviews = customEvent.detail?.reviews;
        if (pr) {
-         setPRForURLs(pr);
+         setPRForURLs({ ...pr, comments, reviews });
          setIsURLMode(true);
          setQuery("");
          setSelectedIndex(0);
@@ -411,12 +413,11 @@ export default function CommandPalette() {
    const urlCommands = useMemo(() => {
      if (!isURLMode || !prForURLs) return [];
 
-     // Get comments and reviews from the PR lookup map if available
-     // For now, we'll just extract from the body since comments/reviews aren't passed
+     // Extract URLs from PR body, comments, and reviews
      const urls = extractAllURLsFromPR(
        prForURLs.body,
-       [], // Comments would need to be passed in separately
-       []  // Reviews would need to be passed in separately
+       prForURLs.comments || [],
+       prForURLs.reviews || []
      );
 
      // Categorize URLs by domain
@@ -499,9 +500,8 @@ export default function CommandPalette() {
              window.open(url.url, '_blank');
              setIsURLMode(false);
            },
-           preview: <div className="truncate">{url.url}</div>,
          };
-       }) as Command[],
+         }) as Command[],
        ...production.map((url, idx) => ({
          id: `url-production-${idx}`,
          name: url.url,
@@ -512,7 +512,6 @@ export default function CommandPalette() {
            window.open(url.url, '_blank');
            setIsURLMode(false);
          },
-         preview: <div className="truncate">{url.url}</div>,
        })) as Command[],
        ...featureFlags.map((url, idx) => ({
          id: `url-feature-flag-${idx}`,
@@ -524,7 +523,6 @@ export default function CommandPalette() {
            window.open(url.url, '_blank');
            setIsURLMode(false);
          },
-         preview: <div className="truncate">{url.url}</div>,
        })) as Command[],
        ...loom.map((url, idx) => ({
          id: `url-loom-${idx}`,
@@ -536,7 +534,6 @@ export default function CommandPalette() {
            window.open(url.url, '_blank');
            setIsURLMode(false);
          },
-         preview: <div className="truncate">{url.url}</div>,
        })) as Command[],
        ...other.map((url, idx) => ({
          id: `url-other-${idx}`,
@@ -548,7 +545,6 @@ export default function CommandPalette() {
            window.open(url.url, '_blank');
            setIsURLMode(false);
          },
-         preview: <div className="truncate">{url.url}</div>,
        })) as Command[],
      ];
 
