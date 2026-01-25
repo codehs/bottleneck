@@ -14,6 +14,7 @@ interface AddLabelDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (labelName: string) => Promise<void>;
+  onRemove?: (labelName: string) => Promise<void>;
   availableLabels: Label[];
   selectedLabels?: string[];
   theme: "light" | "dark";
@@ -46,6 +47,7 @@ export function AddLabelDialog({
   isOpen,
   onClose,
   onSelect,
+  onRemove,
   availableLabels,
   selectedLabels = [],
   theme,
@@ -103,15 +105,21 @@ export function AddLabelDialog({
   }, [searchQuery, filteredLabels]);
 
   const handleSelect = async (labelName: string) => {
+    const isSelected = selectedLabels.includes(labelName);
+    
     setIsLoading(true);
     setSelectedLabelName(labelName);
     try {
-      await onSelect(labelName);
+      if (isSelected && onRemove) {
+        await onRemove(labelName);
+      } else if (!isSelected) {
+        await onSelect(labelName);
+      }
       setSearchQuery("");
       setSelectedLabelName(null);
       onClose();
     } catch (error) {
-      console.error("Failed to add label:", error);
+      console.error(isSelected ? "Failed to remove label:" : "Failed to add label:", error);
       setSelectedLabelName(null);
     } finally {
       setIsLoading(false);
@@ -181,7 +189,7 @@ export function AddLabelDialog({
             theme === "dark" ? "border-gray-700" : "border-gray-200"
           )}
         >
-          <h3 className="text-lg font-semibold">Add Label</h3>
+          <h3 className="text-lg font-semibold">Manage Labels</h3>
           <button
             onClick={onClose}
             disabled={isLoading}
@@ -240,15 +248,17 @@ export function AddLabelDialog({
                 const isSelected = selectedLabels.includes(label.name);
                 const { bgColor, textColor } = getLabelColors(label.color, theme);
 
+                const canToggle = !isSelected || onRemove;
+                
                 return (
                   <button
                     key={label.name}
-                    onClick={() => !isSelected && handleSelect(label.name)}
+                    onClick={() => canToggle && handleSelect(label.name)}
                     onMouseEnter={() => setHighlightedIndex(index)}
-                    disabled={isLoading || isSelected}
+                    disabled={isLoading || (!canToggle)}
                     className={cn(
                       "w-full px-4 py-3 flex items-center space-x-3 transition-colors text-left",
-                      isLoading || isSelected
+                      isLoading || (!canToggle)
                         ? "opacity-60 cursor-not-allowed"
                         : highlightedIndex === index
                           ? theme === "dark"

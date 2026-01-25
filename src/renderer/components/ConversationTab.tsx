@@ -78,11 +78,47 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
     }
   };
 
+  const removeLabelAsync = async (labelName: string) => {
+    const { GitHubAPI } = await import("../services/github");
+    const { usePRStore } = await import("../stores/prStore");
+
+    const api = new GitHubAPI(token);
+
+    // Make API call to remove label
+    await api.removeLabel(
+      pr.base.repo.owner.login,
+      pr.base.repo.name,
+      pr.number,
+      labelName
+    );
+
+    // Update the store with optimistic update
+    const prStore = usePRStore.getState();
+    const key = `${pr.base.repo.owner.login}/${pr.base.repo.name}#${pr.number}`;
+    const currentPR = prStore.pullRequests.get(key);
+
+    if (currentPR) {
+      const updatedPR = {
+        ...currentPR,
+        labels: currentPR.labels.filter((l) => l.name !== labelName),
+      };
+      prStore.updatePR(updatedPR);
+    }
+  };
+
   const handleAddLabel = async (labelName: string) => {
     try {
       await addLabelAsync(labelName);
     } catch (error) {
       console.error("Failed to add label:", error);
+    }
+  };
+
+  const handleRemoveLabel = async (labelName: string) => {
+    try {
+      await removeLabelAsync(labelName);
+    } catch (error) {
+      console.error("Failed to remove label:", error);
     }
   };
 
@@ -193,6 +229,7 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
         isOpen={addLabelDialogOpen}
         onClose={() => setAddLabelDialogOpen(false)}
         onSelect={handleAddLabel}
+        onRemove={handleRemoveLabel}
         availableLabels={availableLabels}
         selectedLabels={pr.labels.map((l) => l.name)}
         theme={theme}
