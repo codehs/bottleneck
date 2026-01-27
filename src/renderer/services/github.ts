@@ -1411,6 +1411,28 @@ export class GitHubAPI {
     return data;
   }
 
+  async updatePullRequestBody(
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    body: string,
+  ): Promise<PullRequest> {
+    const { data } = await this.octokit.pulls.update({
+      owner,
+      repo,
+      pull_number: pullNumber,
+      body,
+    });
+
+    return {
+      ...data,
+      comments: 0,
+      approvalStatus: "none",
+      approvedBy: [],
+      changesRequestedBy: [],
+    } as PullRequest;
+  }
+
   async requestReviewers(
     owner: string,
     repo: string,

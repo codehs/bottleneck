@@ -686,6 +686,26 @@ export default function PRDetailView() {
     setComments((prev) => prev.filter((c) => c.id !== commentId));
   };
 
+  const handleUpdateDescription = async (body: string) => {
+    if (!token) {
+      throw new Error("Sign in with GitHub to update PR description.");
+    }
+
+    const { repoOwner, repoName, pullNumber } = resolveRepoContext();
+    const api = new GitHubAPI(token);
+
+    const updatedPR = await api.updatePullRequestBody(repoOwner, repoName, pullNumber, body);
+
+    // Update local state and store
+    const mergedPR = {
+      ...pr,
+      ...updatedPR,
+      body,
+    };
+    setPR(mergedPR as PullRequest);
+    updatePR(mergedPR as PullRequest);
+  };
+
   const handleResync = async () => {
     if (isResyncing || !owner || !repo) return;
     setIsResyncing(true);
@@ -1110,6 +1130,7 @@ export default function PRDetailView() {
               }
             }}
             onDeleteComment={handleDeleteConversationComment}
+            onUpdateDescription={handleUpdateDescription}
           />
         )}
         {activeTab === "files" && (

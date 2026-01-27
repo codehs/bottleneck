@@ -19,6 +19,7 @@ interface ConversationTabProps {
   reviews: Review[];
   onCommentSubmit: (result: CommentSubmitResult) => void;
   onDeleteComment: (commentId: number) => Promise<void>;
+  onUpdateDescription: (body: string) => Promise<void>;
 }
 
 export interface ConversationTabRef {
@@ -31,6 +32,7 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
   reviews,
   onCommentSubmit,
   onDeleteComment,
+  onUpdateDescription,
 }, ref) {
   const { user, token } = useAuthStore();
   const { theme, addLabelDialogOpen, setAddLabelDialogOpen } = useUIStore();
@@ -205,7 +207,12 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-6xl mx-auto px-6 py-4">
           {/* PR Description */}
-          <PRDescription pr={pr} theme={theme} />
+          <PRDescription
+            pr={pr}
+            theme={theme}
+            currentUser={user}
+            onUpdateDescription={onUpdateDescription}
+          />
 
           {/* Branch info */}
           <BranchInfo pr={pr} theme={theme} />
