@@ -648,6 +648,44 @@ export default function PRDetailView() {
     );
   };
 
+  const handleDeleteReviewComment = async (commentId: number) => {
+    if (!token) {
+      throw new Error("Sign in with GitHub to delete comments.");
+    }
+
+    const { repoOwner, repoName } = resolveRepoContext();
+    const api = new GitHubAPI(token);
+
+    await api.deleteReviewComment(repoOwner, repoName, commentId);
+
+    // Remove the comment from review threads
+    setReviewThreads((prev) =>
+      prev
+        .map((thread) => ({
+          ...thread,
+          comments: thread.comments.filter((c) => c.id !== commentId),
+        }))
+        .filter((thread) => thread.comments.length > 0)
+    );
+
+    // Also remove from review comments if present
+    setReviewComments((prev) => prev.filter((c) => c.id !== commentId));
+  };
+
+  const handleDeleteConversationComment = async (commentId: number) => {
+    if (!token) {
+      throw new Error("Sign in with GitHub to delete comments.");
+    }
+
+    const { repoOwner, repoName } = resolveRepoContext();
+    const api = new GitHubAPI(token);
+
+    await api.deleteIssueComment(repoOwner, repoName, commentId);
+
+    // Remove from comments list
+    setComments((prev) => prev.filter((c) => c.id !== commentId));
+  };
+
   const handleResync = async () => {
     if (isResyncing || !owner || !repo) return;
     setIsResyncing(true);
@@ -1071,6 +1109,7 @@ export default function PRDetailView() {
                 setReviews((prev) => [...prev, result.review]);
               }
             }}
+            onDeleteComment={handleDeleteConversationComment}
           />
         )}
         {activeTab === "files" && (
@@ -1191,6 +1230,7 @@ export default function PRDetailView() {
             canReply={canReplyToThreads}
             onReply={handleThreadReply}
             onResolve={handleThreadResolve}
+            onDeleteComment={handleDeleteReviewComment}
           />
         )}
         {activeTab === "commits" && (

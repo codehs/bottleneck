@@ -1,15 +1,18 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { formatDistanceToNow } from "date-fns";
 import {
   AlertCircle,
   MessageCircleReply,
   CheckCircle2,
   Filter,
+  MoreVertical,
+  Trash2,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { ReviewThread } from "../../services/github";
 import { CompactMarkdownEditor } from "../CompactMarkdownEditor";
 import { Markdown } from "../Markdown";
+import { DeleteCommentDialog } from "./DeleteCommentDialog";
 
 interface CommentsTabProps {
   threads: ReviewThread[];
@@ -18,6 +21,7 @@ interface CommentsTabProps {
   canReply: boolean;
   onReply: (threadId: string, commentId: number, body: string) => Promise<void>;
   onResolve: (threadId: string) => Promise<void>;
+  onDeleteComment: (commentId: number) => Promise<void>;
 }
 
 export function CommentsTab({
@@ -27,14 +31,53 @@ export function CommentsTab({
   canReply,
   onReply,
   onResolve,
+  onDeleteComment,
 }: CommentsTabProps) {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [openReplyThreads, setOpenReplyThreads] = useState<string[]>([]);
   const [replyingThreadId, setReplyingThreadId] = useState<string | null>(null);
   const [resolvingThreadId, setResolvingThreadId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"open" | "resolved">("open");
+  const [openMenuCommentId, setOpenMenuCommentId] = useState<number | null>(null);
+  const [deleteConfirmCommentId, setDeleteConfirmCommentId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const isDark = theme === "dark";
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenMenuCommentId(null);
+      }
+    };
+
+    if (openMenuCommentId !== null) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [openMenuCommentId]);
+
+  const handleDeleteClick = (commentId: number) => {
+    setOpenMenuCommentId(null);
+    setDeleteConfirmCommentId(commentId);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deleteConfirmCommentId === null) return;
+
+    setIsDeleting(true);
+    try {
+      await onDeleteComment(deleteConfirmCommentId);
+      setDeleteConfirmCommentId(null);
+    } catch (error) {
+      console.error("Failed to delete comment:", error);
+      alert("Failed to delete comment. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const sortedThreads = useMemo(
     () =>
@@ -292,6 +335,7 @@ export function CommentsTab({
                     const relativeTime = hasValidDate
                       ? formatDistanceToNow(commentDate!, { addSuffix: true })
                       : "recently";
+                    const isAuthor = currentUser?.login === comment.user.login;
 
                     return (
                        <div key={comment.id} className="flex gap-3">
@@ -301,23 +345,64 @@ export function CommentsTab({
                            className="w-8 h-8 rounded-full flex-shrink-0"
                          />
                          <div className="flex-1 min-w-0">
-                           <div className="flex items-center gap-2 text-xs">
-                             <span
-                               className={cn(
-                                 "text-sm font-semibold",
-                                 isDark ? "text-gray-100" : "text-gray-800",
-                               )}
-                             >
-                               {comment.user.login}
-                             </span>
-                             <span
-                               className={cn(
-                                 "text-[11px]",
-                                 isDark ? "text-gray-400" : "text-gray-500",
-                               )}
-                             >
-                               {relativeTime}
-                             </span>
+                           <div className="flex items-center justify-between">
+                             <div className="flex items-center gap-2 text-xs">
+                               <span
+                                 className={cn(
+                                   "text-sm font-semibold",
+                                   isDark ? "text-gray-100" : "text-gray-800",
+                                 )}
+                               >
+                                 {comment.user.login}
+                               </span>
+                               <span
+                                 className={cn(
+                                   "text-[11px]",
+                                   isDark ? "text-gray-400" : "text-gray-500",
+                                 )}
+                               >
+                                 {relativeTime}
+                               </span>
+                             </div>
+                             {isAuthor && (
+                               <div className="relative" ref={openMenuCommentId === comment.id ? menuRef : undefined}>
+                                 <button
+                                   onClick={() => setOpenMenuCommentId(
+                                     openMenuCommentId === comment.id ? null : comment.id
+                                   )}
+                                   className={cn(
+                                     "p-1 rounded transition-colors",
+                                     isDark
+                                       ? "hover:bg-gray-700 text-gray-400 hover:text-gray-200"
+                                       : "hover:bg-gray-100 text-gray-600 hover:text-gray-800",
+                                   )}
+                                 >
+                                   <MoreVertical className="w-4 h-4" />
+                                 </button>
+
+                                 {openMenuCommentId === comment.id && (
+                                   <div
+                                     className={cn(
+                                       "absolute right-0 mt-1 py-1 rounded shadow-lg z-10 min-w-[120px]",
+                                       isDark
+                                         ? "bg-gray-700 border border-gray-600"
+                                         : "bg-white border border-gray-200",
+                                     )}
+                                   >
+                                     <button
+                                       onClick={() => handleDeleteClick(comment.id)}
+                                       className={cn(
+                                         "flex items-center space-x-2 px-3 py-1.5 w-full text-left text-sm transition-colors",
+                                         "text-red-500 hover:bg-red-500 hover:text-white",
+                                       )}
+                                     >
+                                       <Trash2 className="w-3 h-3" />
+                                       <span>Delete</span>
+                                     </button>
+                                   </div>
+                                 )}
+                               </div>
+                             )}
                            </div>
                            <div className={cn(
                              "mt-2 text-sm overflow-hidden",
@@ -408,6 +493,15 @@ export function CommentsTab({
           );
         })}
       </div>
+
+      {deleteConfirmCommentId !== null && (
+        <DeleteCommentDialog
+          theme={theme}
+          isDeleting={isDeleting}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeleteConfirmCommentId(null)}
+        />
+      )}
     </div>
   );
 }

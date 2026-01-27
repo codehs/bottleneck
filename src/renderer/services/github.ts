@@ -1611,6 +1611,18 @@ export class GitHubAPI {
     });
   }
 
+  async deleteReviewComment(
+    owner: string,
+    repo: string,
+    commentId: number,
+  ): Promise<void> {
+    await this.octokit.pulls.deleteReviewComment({
+      owner,
+      repo,
+      comment_id: commentId,
+    });
+  }
+
   async closeIssue(
     owner: string,
     repo: string,

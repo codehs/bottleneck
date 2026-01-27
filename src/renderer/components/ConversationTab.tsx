@@ -1,4 +1,4 @@
-import { forwardRef, useRef, useImperativeHandle } from "react";
+import { forwardRef, useRef, useImperativeHandle, useState, useEffect } from "react";
 import { PullRequest, Comment, Review } from "../services/github";
 import { useAuthStore } from "../stores/authStore";
 import { useUIStore } from "../stores/uiStore";
@@ -11,13 +11,14 @@ import { ParticipantsSidebar } from "./conversation/ParticipantsSidebar";
 import { AddLabelDialog } from "./conversation/AddLabelDialog";
 import { useParticipantStats } from "./conversation/useParticipantStats";
 import { useLabelStore } from "../stores/labelStore";
-import { useState, useEffect } from "react";
+import { DeleteCommentDialog } from "./pr-detail/DeleteCommentDialog";
 
 interface ConversationTabProps {
   pr: PullRequest;
   comments: Comment[];
   reviews: Review[];
   onCommentSubmit: (result: CommentSubmitResult) => void;
+  onDeleteComment: (commentId: number) => Promise<void>;
 }
 
 export interface ConversationTabRef {
@@ -29,6 +30,7 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
   comments,
   reviews,
   onCommentSubmit,
+  onDeleteComment,
 }, ref) {
   const { user, token } = useAuthStore();
   const { theme, addLabelDialogOpen, setAddLabelDialogOpen } = useUIStore();
@@ -37,6 +39,8 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
     Array<{ name: string; color: string; description?: string | null }>
   >([]);
   const [isLoadingLabels, setIsLoadingLabels] = useState(false);
+  const [deleteConfirmCommentId, setDeleteConfirmCommentId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useImperativeHandle(ref, () => ({
     focusCommentForm: () => {
@@ -146,6 +150,25 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
   // Calculate participant stats
   const participantStats = useParticipantStats(pr, comments, reviews);
 
+  const handleDeleteClick = (commentId: number) => {
+    setDeleteConfirmCommentId(commentId);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deleteConfirmCommentId === null) return;
+
+    setIsDeleting(true);
+    try {
+      await onDeleteComment(deleteConfirmCommentId);
+      setDeleteConfirmCommentId(null);
+    } catch (error) {
+      console.error("Failed to delete comment:", error);
+      alert("Failed to delete comment. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Combine comments and reviews into a timeline
   // Filter out reviews that are PENDING or have no submitted_at timestamp
   const timeline = [
@@ -197,6 +220,8 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
                 key={`${item.type}-${item.id}-${index}`}
                 item={item}
                 theme={theme}
+                currentUser={user}
+                onDeleteComment={handleDeleteClick}
               />
             ))}
           </div>
@@ -235,6 +260,16 @@ export const ConversationTab = forwardRef<ConversationTabRef, ConversationTabPro
         theme={theme}
         isLoadingLabels={isLoadingLabels}
       />
+
+      {/* Delete Comment Confirmation Dialog */}
+      {deleteConfirmCommentId !== null && (
+        <DeleteCommentDialog
+          theme={theme}
+          isDeleting={isDeleting}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeleteConfirmCommentId(null)}
+        />
+      )}
     </div>
   );
 });
