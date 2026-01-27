@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, X, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users, Tag, Ship, RefreshCw } from "lucide-react";
+import { Search, X, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users, Tag, Ship, RefreshCw, Pencil } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
 import { useSyncStore } from "../stores/syncStore";
@@ -288,6 +288,16 @@ export default function CommandPalette() {
           useUIStore.getState().triggerFocusCommentBox();
         },
         preview: <div>Focus the comment box to add a comment</div>,
+      });
+      cmds.push({
+        id: "edit-description",
+        name: "Edit Description",
+        keywords: "edit description body update",
+        icon: Pencil,
+        action: () => {
+          useUIStore.getState().triggerEditDescription();
+        },
+        preview: <div>Edit the PR description (author only)</div>,
       });
       cmds.push({
         id: "copy-gh-checkout",

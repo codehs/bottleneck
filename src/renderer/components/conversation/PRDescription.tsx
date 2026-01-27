@@ -64,6 +64,21 @@ export function PRDescription({ pr, theme, currentUser, onUpdateDescription }: P
     }
   }, [isEditing]);
 
+  // Listen for edit description event from command palette
+  useEffect(() => {
+    const handleEditDescription = () => {
+      if (canEdit) {
+        setEditText(pr.body || "");
+        setIsEditing(true);
+      }
+    };
+
+    window.addEventListener("pr-action:edit-description", handleEditDescription);
+    return () => {
+      window.removeEventListener("pr-action:edit-description", handleEditDescription);
+    };
+  }, [canEdit, pr.body]);
+
   // Filter mention candidates based on query
   const filteredMentionCandidates = mentionQuery
     ? orgMembers.filter((candidate) => {
@@ -281,7 +296,7 @@ export function PRDescription({ pr, theme, currentUser, onUpdateDescription }: P
                 value={editText}
                 onChange={handleTextChange}
                 onKeyDown={handleKeyDown}
-                className="input w-full h-48 resize-none mb-3 font-mono text-sm"
+                className="input w-full h-[36rem] resize-none mb-3 font-mono text-sm"
                 placeholder="Write a description... (@ to mention)"
               />
               <div className="flex items-center justify-end space-x-2">

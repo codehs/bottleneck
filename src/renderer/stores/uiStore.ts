@@ -68,6 +68,7 @@ interface UIState {
   triggerApprovePR: () => void;
   triggerClosePR: () => void;
   triggerFocusCommentBox: () => void;
+  triggerEditDescription: () => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -179,6 +180,9 @@ export const useUIStore = create<UIState>()(
       },
       triggerFocusCommentBox: () => {
         window.dispatchEvent(new CustomEvent("pr-action:focus-comment"));
+      },
+      triggerEditDescription: () => {
+        window.dispatchEvent(new CustomEvent("pr-action:edit-description"));
       },
     }),
     {
