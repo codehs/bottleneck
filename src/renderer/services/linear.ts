@@ -49,6 +49,7 @@ export interface LinearIssue {
     draft: boolean;
     merged: boolean;
     approvalStatus?: "approved" | "changes_requested" | "pending" | "none";
+    updatedAt?: string;
     author?: {
       login: string;
       avatarUrl: string;

@@ -28,6 +28,7 @@ function prToLinkedPR(pr: PullRequest) {
     draft: pr.draft || false,
     merged: pr.merged || false,
     approvalStatus: pr.approvalStatus,
+    updatedAt: pr.updated_at,
     author: pr.user
       ? {
           login: pr.user.login,
