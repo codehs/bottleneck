@@ -341,7 +341,7 @@ export default function MeView() {
   return (
     <div
       className={cn(
-        "flex-1 overflow-hidden flex flex-col",
+        "flex-1 h-full min-h-0 overflow-hidden flex flex-col",
         theme === "dark"
           ? "bg-gray-900 text-gray-100"
           : "bg-gray-50 text-gray-900",
@@ -391,7 +391,7 @@ export default function MeView() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col">
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         <div
           className={cn(
             "flex items-center justify-between border-b px-6",
@@ -471,7 +471,7 @@ export default function MeView() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 min-h-0 overflow-y-auto p-6">
           <PRList
             prs={getTabPRs(activeTab)}
             theme={theme}

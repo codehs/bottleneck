@@ -89,7 +89,12 @@ export default function FollowingView() {
 
   if (followedUsers.length === 0) {
     return (
-      <div className={cn("flex-1 flex flex-col h-full", theme === "dark" ? "bg-gray-900" : "bg-white")}>
+      <div
+        className={cn(
+          "flex-1 flex flex-col h-full min-h-0",
+          theme === "dark" ? "bg-gray-900" : "bg-white"
+        )}
+      >
         <div className="flex items-center justify-center flex-1">
           <div className="text-center">
             <Users
@@ -132,7 +137,12 @@ export default function FollowingView() {
   }
 
   return (
-    <div className={cn("flex-1 flex flex-col h-full", theme === "dark" ? "bg-gray-900" : "bg-white")}>
+    <div
+      className={cn(
+        "flex-1 flex flex-col h-full min-h-0",
+        theme === "dark" ? "bg-gray-900" : "bg-white"
+      )}
+    >
       <div
         className={cn(
           "flex items-center justify-between px-4 py-3 border-b",
@@ -166,7 +176,7 @@ export default function FollowingView() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {followedPRs.length === 0 ? (
           <div
             className={cn(

@@ -77,7 +77,7 @@ export default function IssueDetailView() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       <IssueHeader
         issue={issue}
         commentsCount={comments.length}
@@ -91,7 +91,7 @@ export default function IssueDetailView() {
         repo={repo}
       />
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 min-h-0 overflow-y-auto p-6">
         <div className="max-w-4xl mx-auto">
           <div className="flex space-x-6">
             <div className="flex-1 space-y-4">

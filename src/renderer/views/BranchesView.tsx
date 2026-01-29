@@ -690,7 +690,7 @@ export default function BranchesView() {
 
   return (
     <>
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full min-h-0">
         {/* Header */}
         <div
           className={cn(
@@ -891,7 +891,7 @@ export default function BranchesView() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center h-64">
                 <div

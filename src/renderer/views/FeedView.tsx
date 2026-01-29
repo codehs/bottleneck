@@ -25,7 +25,7 @@ export default function FeedView() {
   return (
     <div
       className={cn(
-        "h-full overflow-hidden flex flex-col",
+        "h-full min-h-0 overflow-hidden flex flex-col",
         theme === "dark"
           ? "bg-gray-900 text-gray-100"
           : "bg-white text-gray-900"

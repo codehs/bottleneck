@@ -145,7 +145,7 @@ export default function StatsView() {
   return (
     <div
       className={cn(
-        "flex-1 flex flex-col overflow-hidden",
+        "flex-1 flex flex-col overflow-hidden min-h-0",
         theme === "dark" ? "bg-gray-900 text-gray-100" : "bg-white text-gray-900"
       )}
     >
@@ -170,7 +170,7 @@ export default function StatsView() {
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto">
         <div className="p-6 max-w-7xl mx-auto space-y-6">
 
         {/* Current Snapshot */}

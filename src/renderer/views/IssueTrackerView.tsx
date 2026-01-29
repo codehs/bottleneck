@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileEdit, Eye, MessageSquare, CheckCircle, GitPullRequest, Settings, ExternalLink } from "lucide-react";
 import { useLinearIssueStore } from "../stores/linearIssueStore";
@@ -76,7 +76,7 @@ const KanbanColumnComponent = React.memo(function KanbanColumnComponent({
   return (
     <div
       className={cn(
-        "flex flex-col h-full min-w-72 max-w-72",
+        "flex flex-col h-full min-h-0 min-w-72 max-w-72",
         column.bgColor,
         "border-r transition-all duration-200",
         theme === "dark" ? "border-gray-700" : "border-gray-200",
@@ -99,7 +99,7 @@ const KanbanColumnComponent = React.memo(function KanbanColumnComponent({
         </div>
       </div>
 
-      <div className="flex-1 p-2 space-y-2 overflow-y-auto">
+      <div className="flex-1 min-h-0 p-2 space-y-2 overflow-y-auto">
         {issues.length === 0 ? (
           <div
             className={cn(
@@ -207,11 +207,12 @@ export default function IssueTrackerView() {
     fetchIssuesForRepo,
     relinkIssuesForRepo,
   } = useLinearIssueStore();
-  const { selectedRepo, pullRequests, fetchPullRequests, revision } = usePRStore();
+  const { selectedRepo, pullRequests, fetchPullRequests, fetchPRDetails, revision } = usePRStore();
   const { theme } = useUIStore();
   const { settings } = useSettingsStore();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const fetchedDetailPRsRef = useRef<Set<string>>(new Set());
 
   const hasApiKey = Boolean(settings.linearApiKey);
 
@@ -219,13 +220,20 @@ export default function IssueTrackerView() {
   useEffect(() => {
     if (selectedRepo && hasApiKey) {
       console.log(`[LINEAR VIEW] 🚀 Fetching PRs for ${selectedRepo.owner}/${selectedRepo.name}`);
-      // Ensure PRs are loaded first
-      fetchPullRequests(selectedRepo.owner, selectedRepo.name).then(() => {
+      // Force refresh to ensure approvalStatus is accurate for columns
+      fetchPullRequests(selectedRepo.owner, selectedRepo.name, true).then(() => {
         console.log(`[LINEAR VIEW] ✅ PRs loaded, now fetching Linear issues`);
         fetchIssuesForRepo(selectedRepo.owner, selectedRepo.name);
       });
     }
   }, [selectedRepo, hasApiKey, fetchPullRequests, fetchIssuesForRepo]);
+
+  useEffect(() => {
+    if (!selectedRepo) {
+      return;
+    }
+    fetchedDetailPRsRef.current.clear();
+  }, [selectedRepo]);
 
   // Re-link Linear issues when PR data changes (revision increments on any PR update)
   useEffect(() => {
@@ -234,6 +242,48 @@ export default function IssueTrackerView() {
       relinkIssuesForRepo(selectedRepo.owner, selectedRepo.name);
     }
   }, [revision, selectedRepo, hasApiKey, issues.size, relinkIssuesForRepo]);
+
+  useEffect(() => {
+    if (!selectedRepo || !hasApiKey || issues.size === 0) {
+      return;
+    }
+
+    const recentThreshold = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const repoKey = `${selectedRepo.owner}/${selectedRepo.name}`;
+    const toFetch: number[] = [];
+
+    for (const issue of issues.values()) {
+      for (const pr of issue.linkedPRs || []) {
+        if (pr.state !== "open" || pr.merged) {
+          continue;
+        }
+        if (!pr.updatedAt || new Date(pr.updatedAt).getTime() < recentThreshold) {
+          continue;
+        }
+        if (pr.approvalStatus && pr.approvalStatus !== "none") {
+          continue;
+        }
+
+        const prKey = `${repoKey}#${pr.number}`;
+        if (fetchedDetailPRsRef.current.has(prKey)) {
+          continue;
+        }
+
+        fetchedDetailPRsRef.current.add(prKey);
+        toFetch.push(pr.number);
+      }
+    }
+
+    if (toFetch.length === 0) {
+      return;
+    }
+
+    toFetch.forEach((prNumber) => {
+      fetchPRDetails(selectedRepo.owner, selectedRepo.name, prNumber).catch((error) => {
+        console.error(`[LINEAR VIEW] ❌ Failed to fetch PR details for #${prNumber}:`, error);
+      });
+    });
+  }, [issues, selectedRepo, hasApiKey, fetchPRDetails]);
 
   const filteredIssues = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -260,6 +310,7 @@ export default function IssueTrackerView() {
 
   const categorizedIssues = useMemo(() => {
     const issuesArray = Array.from(filteredIssues.values());
+    const recentThreshold = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
     // Debug: log all issues and their PR data
     console.log('[IssueTracker] Total issues:', issuesArray.length);
@@ -271,6 +322,7 @@ export default function IssueTrackerView() {
           draft: pr.draft,
           merged: pr.merged,
           approvalStatus: pr.approvalStatus,
+          updatedAt: pr.updatedAt,
         })),
       });
     });
@@ -283,8 +335,15 @@ export default function IssueTrackerView() {
     };
 
     issuesArray.forEach((issue) => {
+      const recentLinkedPRs = issue.linkedPRs?.filter((pr) => {
+        if (!pr.updatedAt) {
+          return false;
+        }
+        return new Date(pr.updatedAt).getTime() >= recentThreshold;
+      }) || [];
+
       // Only consider open, non-merged PRs
-      const openPRs = issue.linkedPRs?.filter(
+      const openPRs = recentLinkedPRs.filter(
         (pr) => pr.state === "open" && !pr.merged,
       ) || [];
 
@@ -341,7 +400,7 @@ export default function IssueTrackerView() {
 
   if (!hasApiKey) {
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full min-h-0">
         <div
           className={cn(
             "px-3 py-2 border-b",
@@ -363,7 +422,7 @@ export default function IssueTrackerView() {
   const totalIssues = filteredIssues.size;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       <div
         className={cn(
           "px-3 py-2 border-b",
@@ -409,7 +468,7 @@ export default function IssueTrackerView() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="flex items-center space-x-2">
@@ -426,8 +485,8 @@ export default function IssueTrackerView() {
         ) : totalIssues === 0 ? (
           <NoIssuesMessage theme={theme} />
         ) : (
-          <div className="h-full overflow-x-auto">
-            <div className="flex h-full min-w-max">
+          <div className="h-full min-h-0 overflow-x-auto">
+            <div className="flex h-full min-h-0 min-w-max">
               {KANBAN_COLUMNS.map((column) => (
                 <KanbanColumnComponent
                   key={column.id}
