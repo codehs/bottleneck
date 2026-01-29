@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FileEdit, Eye, MessageSquare, CheckCircle, GitPullRequest, Settings, ExternalLink } from "lucide-react";
 import { useLinearIssueStore } from "../stores/linearIssueStore";
 import { usePRStore } from "../stores/prStore";
@@ -59,6 +60,7 @@ interface KanbanColumnProps {
   column: KanbanColumnConfig;
   issues: LinearIssue[];
   onIssueClick: (issue: LinearIssue) => void;
+  onPRClick: (prNumber: number) => void;
   theme: "light" | "dark";
 }
 
@@ -66,6 +68,7 @@ const KanbanColumnComponent = React.memo(function KanbanColumnComponent({
   column,
   issues,
   onIssueClick,
+  onPRClick,
   theme,
 }: KanbanColumnProps) {
   const Icon = column.icon;
@@ -113,6 +116,7 @@ const KanbanColumnComponent = React.memo(function KanbanColumnComponent({
               key={issue.id}
               issue={issue}
               onIssueClick={onIssueClick}
+              onPRClick={onPRClick}
               theme={theme}
             />
           ))
@@ -195,6 +199,7 @@ function NoIssuesMessage({ theme }: { theme: "light" | "dark" }) {
 }
 
 export default function IssueTrackerView() {
+  const navigate = useNavigate();
   const {
     issues,
     loading,
@@ -323,6 +328,12 @@ export default function IssueTrackerView() {
     window.open(issue.url, "_blank");
   }, []);
 
+  const handlePRClick = useCallback((prNumber: number) => {
+    if (selectedRepo) {
+      navigate(`/pulls/${selectedRepo.owner}/${selectedRepo.name}/${prNumber}`);
+    }
+  }, [navigate, selectedRepo]);
+
   if (!selectedRepo) {
     return <WelcomeView />;
   }
@@ -422,6 +433,7 @@ export default function IssueTrackerView() {
                   column={column}
                   issues={categorizedIssues[column.id]}
                   onIssueClick={handleIssueClick}
+                  onPRClick={handlePRClick}
                   theme={theme}
                 />
               ))}
