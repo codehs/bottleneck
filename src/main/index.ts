@@ -552,3 +552,33 @@ ipcMain.handle("updater:get-status", () => {
     currentVersion: app.getVersion()
   };
 });
+
+// Cache operations
+ipcMain.handle("cache:get-size", async () => {
+  try {
+    const storePath = store.path;
+    const fs = require("fs");
+    
+    // Get the size of the store file
+    let cacheSize = 0;
+    try {
+      const stats = fs.statSync(storePath);
+      cacheSize = stats.size;
+    } catch (err) {
+      console.error("Error getting store file size:", err);
+    }
+    
+    return { success: true, size: cacheSize };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+ipcMain.handle("cache:clear", async () => {
+  try {
+    store.clear();
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
+});

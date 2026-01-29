@@ -40,6 +40,15 @@ import { cn } from "../utils/cn";
 
 type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error';
 
+// Helper function to format bytes to human-readable size
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
+
 export default function SettingsView() {
   const { user, logout } = useAuthStore();
   const { 
@@ -168,9 +177,15 @@ export default function SettingsView() {
   };
 
   const handleClearCache = async () => {
-    // Clear cached data from electron-store
-    // This will clear branch caches and other stored data
-    console.log("Cache cleared - app will re-fetch data on next sync");
+    try {
+      const result = await window.electron.cache.clear();
+      if (result.success) {
+        setCacheSize(0);
+        console.log("Cache cleared - app will re-fetch data on next sync");
+      }
+    } catch (error) {
+      console.error("Failed to clear cache:", error);
+    }
   };
 
   const handleResetToDefaults = async () => {
@@ -247,6 +262,29 @@ export default function SettingsView() {
 
   // State for showing/hiding API key
   const [showLinearApiKey, setShowLinearApiKey] = useState(false);
+  
+  // State for cache size
+  const [cacheSize, setCacheSize] = useState<number>(0);
+  const [loadingCacheSize, setLoadingCacheSize] = useState(false);
+
+  // Load cache size on component mount
+  useEffect(() => {
+    const loadCacheSize = async () => {
+      setLoadingCacheSize(true);
+      try {
+        const result = await window.electron.cache.getSize();
+        if (result.success) {
+          setCacheSize(result.size);
+        }
+      } catch (error) {
+        console.error("Failed to get cache size:", error);
+      } finally {
+        setLoadingCacheSize(false);
+      }
+    };
+    
+    loadCacheSize();
+  }, []);
 
   return (
     <div className="flex h-full">
@@ -1547,24 +1585,36 @@ export default function SettingsView() {
                     >
                       Danger Zone
                     </h3>
-                    <div className="flex flex-col space-y-2">
-                      <button
-                        onClick={handleClearCache}
-                        className="btn btn-danger w-fit"
-                      >
-                        <Database className="w-4 h-4 mr-2" />
-                        Clear Cache
-                      </button>
+                    <div className="flex flex-col space-y-4">
+                       <div>
+                         <div className="flex items-center justify-between mb-2">
+                           <button
+                             onClick={handleClearCache}
+                             className="btn btn-danger w-fit"
+                           >
+                             <Database className="w-4 h-4 mr-2" />
+                             Clear Cache
+                           </button>
+                           <span
+                             className={cn(
+                               "text-sm",
+                               theme === "dark" ? "text-gray-400" : "text-gray-600",
+                             )}
+                           >
+                             {loadingCacheSize ? "Loading..." : `${formatBytes(cacheSize)} used`}
+                           </span>
+                         </div>
+                       </div>
 
-                      <button
-                        onClick={() => setShowResetDialog(true)}
-                        className="btn btn-danger w-fit"
-                        disabled={isResetting}
-                      >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        {isResetting ? "Resetting..." : "Reset to Defaults"}
-                      </button>
-                    </div>
+                       <button
+                         onClick={() => setShowResetDialog(true)}
+                         className="btn btn-danger w-fit"
+                         disabled={isResetting}
+                       >
+                         <RefreshCw className="w-4 h-4 mr-2" />
+                         {isResetting ? "Resetting..." : "Reset to Defaults"}
+                       </button>
+                     </div>
                   </div>
                 </div>
               </div>

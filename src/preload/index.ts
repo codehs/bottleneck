@@ -80,6 +80,12 @@ const electronAPI = {
     clear: () => ipcRenderer.invoke("settings:clear"),
   },
 
+  // Cache operations
+  cache: {
+    getSize: () => ipcRenderer.invoke("cache:get-size"),
+    clear: () => ipcRenderer.invoke("cache:clear"),
+  },
+
   // IPC event listeners
   on: (
     channel: string,
