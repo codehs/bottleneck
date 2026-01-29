@@ -205,8 +205,9 @@ export default function IssueTrackerView() {
     loading,
     error,
     fetchIssuesForRepo,
+    relinkIssuesForRepo,
   } = useLinearIssueStore();
-  const { selectedRepo, pullRequests, fetchPullRequests } = usePRStore();
+  const { selectedRepo, pullRequests, fetchPullRequests, revision } = usePRStore();
   const { theme } = useUIStore();
   const { settings } = useSettingsStore();
 
@@ -226,13 +227,13 @@ export default function IssueTrackerView() {
     }
   }, [selectedRepo, hasApiKey, fetchPullRequests, fetchIssuesForRepo]);
 
-  // Re-fetch Linear issues when PRs change (with proper dependencies)
+  // Re-link Linear issues when PR data changes (revision increments on any PR update)
   useEffect(() => {
-    if (selectedRepo && hasApiKey && pullRequests.size > 0) {
-      console.log(`[LINEAR VIEW] 🔄 PRs changed (${pullRequests.size}), re-fetching Linear issues`);
-      fetchIssuesForRepo(selectedRepo.owner, selectedRepo.name, true);
+    if (selectedRepo && hasApiKey && issues.size > 0) {
+      console.log(`[LINEAR VIEW] 🔄 PR revision changed (${revision}), re-linking Linear issues`);
+      relinkIssuesForRepo(selectedRepo.owner, selectedRepo.name);
     }
-  }, [pullRequests.size, selectedRepo, hasApiKey, fetchIssuesForRepo]);
+  }, [revision, selectedRepo, hasApiKey, issues.size, relinkIssuesForRepo]);
 
   const filteredIssues = useMemo(() => {
     if (!searchQuery.trim()) {

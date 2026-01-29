@@ -12,6 +12,7 @@ interface LinearIssueState {
   lastFetchedRepo: string | null;
 
   fetchIssuesForRepo: (owner: string, repo: string, force?: boolean) => Promise<void>;
+  relinkIssuesForRepo: (owner: string, repo: string) => void;
   getIssueByIdentifier: (identifier: string) => LinearIssue | undefined;
   clearIssues: () => void;
 }
@@ -137,6 +138,22 @@ export const useLinearIssueStore = create<LinearIssueState>((set, get) => ({
         loading: false,
       });
     }
+  },
+
+  relinkIssuesForRepo: (owner: string, repo: string) => {
+    const currentIssues = get().issues;
+    if (currentIssues.size === 0) return;
+
+    const prStore = usePRStore.getState();
+    const linearToPRMap = buildLinearIssueToPRMap(prStore.pullRequests, owner, repo);
+
+    const updatedIssues = new Map<string, LinearIssue>();
+    for (const [id, issue] of currentIssues.entries()) {
+      const linkedPRs = (linearToPRMap.get(issue.identifier) || []).map(prToLinkedPR);
+      updatedIssues.set(id, { ...issue, linkedPRs });
+    }
+
+    set({ issues: updatedIssues });
   },
 
   getIssueByIdentifier: (identifier: string) => {
