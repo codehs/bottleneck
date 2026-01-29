@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, GitPullRequest, Eye, Users, Filter } from "lucide-react";
+import { User, GitPullRequest, Eye, Users, Filter, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { useAuthStore } from "../stores/authStore";
 import { usePRStore } from "../stores/prStore";
 import { useUIStore } from "../stores/uiStore";
 import type { PullRequest } from "../services/github";
 import { cn } from "../utils/cn";
 import { getPRIconProps } from "../utils/prStatus";
+import { getLabelColors } from "../utils/labelColors";
 
 const formatDateTime = (date: string) => {
   const d = new Date(date);
@@ -124,7 +125,7 @@ const PRList = ({ prs, theme, emptyMessage, onSelect }: PRListProps) => {
                     <Icon className={iconClassName} />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium">{pr.title}</span>
                       {isDraft && (
                         <span
@@ -146,6 +147,63 @@ const PRList = ({ prs, theme, emptyMessage, onSelect }: PRListProps) => {
                       )}
                     >
                       {repoName} • #{pr.number} • by {pr.user.login}
+                    </div>
+                    
+                    {/* Labels and review status row */}
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      {/* Review status badge */}
+                      {pr.state === "open" && !pr.merged && (
+                        <div className="flex items-center">
+                          {pr.approvalStatus === "approved" ? (
+                            <div className="flex items-center px-1.5 py-0.5 bg-green-500/20 text-green-500 rounded text-[10px] leading-tight" title="Approved">
+                              <CheckCircle2 className="w-3 h-3 mr-0.5" />
+                              <span>Approved{pr.approvedBy && pr.approvedBy.length > 0 && ` (${pr.approvedBy.length})`}</span>
+                            </div>
+                          ) : pr.approvalStatus === "changes_requested" ? (
+                            <div className="flex items-center px-1.5 py-0.5 bg-red-500/20 text-red-500 rounded text-[10px] leading-tight" title="Changes requested">
+                              <XCircle className="w-3 h-3 mr-0.5" />
+                              <span>Changes requested</span>
+                            </div>
+                          ) : pr.approvalStatus === "pending" ? (
+                            <div className="flex items-center px-1.5 py-0.5 bg-yellow-500/20 text-yellow-500 rounded text-[10px] leading-tight" title="Review pending">
+                              <Clock className="w-3 h-3 mr-0.5" />
+                              <span>Pending</span>
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+
+                      {/* Labels */}
+                      {pr.labels && pr.labels.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          {pr.labels.slice(0, 2).map((label) => {
+                            const labelColors = getLabelColors(label.color, theme);
+                            return (
+                              <span
+                                key={label.name}
+                                className="px-2 py-0.5 rounded text-[10px] font-medium opacity-80"
+                                style={{
+                                  backgroundColor: labelColors.backgroundColor,
+                                  color: labelColors.color,
+                                }}
+                                title={label.name}
+                              >
+                                {label.name.length > 15 ? `${label.name.slice(0, 15)}…` : label.name}
+                              </span>
+                            );
+                          })}
+                          {pr.labels.length > 2 && (
+                            <span
+                              className={cn(
+                                "text-xs",
+                                theme === "dark" ? "text-gray-500" : "text-gray-400"
+                              )}
+                            >
+                              +{pr.labels.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
