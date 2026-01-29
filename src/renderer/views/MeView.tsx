@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { User } from "lucide-react";
+import { User, GitPullRequest, Eye, Users, Filter } from "lucide-react";
 import { useAuthStore } from "../stores/authStore";
 import { usePRStore } from "../stores/prStore";
 import { useUIStore } from "../stores/uiStore";
@@ -46,140 +46,149 @@ const matchesLogin = (login: string | undefined, target: string) =>
 const sortByUpdated = (a: PullRequest, b: PullRequest) =>
   new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
 
-interface PRSectionProps {
-  title: string;
-  description: string;
+type TabId = "opened" | "review" | "involved";
+
+interface Tab {
+  id: TabId;
+  label: string;
+  icon: typeof GitPullRequest;
+  emptyMessage: string;
+}
+
+const tabs: Tab[] = [
+  { id: "opened", label: "Opened by you", icon: GitPullRequest, emptyMessage: "No pull requests authored yet." },
+  { id: "review", label: "Needs your review", icon: Eye, emptyMessage: "No review requests right now." },
+  { id: "involved", label: "You're involved", icon: Users, emptyMessage: "No other PRs with your involvement." },
+];
+
+type StatusFilter = "open" | "closed" | "merged" | "draft";
+
+const statusFilters: { id: StatusFilter; label: string }[] = [
+  { id: "open", label: "Open" },
+  { id: "draft", label: "Draft" },
+  { id: "closed", label: "Closed" },
+  { id: "merged", label: "Merged" },
+];
+
+const getPRStatus = (pr: PullRequest): StatusFilter => {
+  if (pr.merged) return "merged";
+  if (pr.draft && pr.state === "open") return "draft";
+  if (pr.state === "closed") return "closed";
+  return "open";
+};
+
+interface PRListProps {
   prs: PullRequest[];
   theme: "light" | "dark";
   emptyMessage: string;
   onSelect: (pr: PullRequest) => void;
 }
 
-const PRSection = ({
-  title,
-  description,
-  prs,
-  theme,
-  emptyMessage,
-  onSelect,
-}: PRSectionProps) => (
-  <div
-    className={cn(
-      "rounded-xl border p-4 flex flex-col min-h-[280px]",
-      theme === "dark"
-        ? "bg-gray-800 border-gray-700"
-        : "bg-white border-gray-200",
-    )}
-  >
-    <div className="mb-4">
-      <h2 className="text-lg font-semibold flex items-center gap-2">
-        {title}
-        <span
-          className={cn(
-            "text-xs font-medium px-2 py-0.5 rounded-full",
-            theme === "dark"
-              ? "bg-gray-700 text-gray-300"
-              : "bg-gray-100 text-gray-600",
-          )}
-        >
-          {prs.length}
-        </span>
-      </h2>
-      <p
-        className={cn(
-          "text-sm mt-1",
-          theme === "dark" ? "text-gray-400" : "text-gray-500",
-        )}
-      >
-        {description}
-      </p>
-    </div>
-
-    {prs.length === 0 ? (
+const PRList = ({ prs, theme, emptyMessage, onSelect }: PRListProps) => {
+  if (prs.length === 0) {
+    return (
       <div
         className={cn(
-          "flex-1 flex items-center justify-center text-sm",
+          "flex-1 flex items-center justify-center text-sm py-12",
           theme === "dark" ? "text-gray-500" : "text-gray-400",
         )}
       >
         {emptyMessage}
       </div>
-    ) : (
-      <ul className="space-y-3">
-        {prs.map((pr) => {
-          const { Icon, className: iconClassName } = getPRIconProps(pr, "w-4 h-4");
-          const repoName = `${pr.base.repo.owner.login}/${pr.base.repo.name}`;
-          const updatedLabel = formatDateTime(pr.updated_at);
-          const isDraft = pr.draft && pr.state === "open";
+    );
+  }
 
-          return (
-            <li key={getPRKey(pr)}>
-              <button
-                type="button"
-                onClick={() => onSelect(pr)}
-                className={cn(
-                  "w-full text-left rounded-lg border p-3 transition hover:shadow-sm",
-                  theme === "dark"
-                    ? "bg-gray-900 border-gray-700 hover:border-gray-600"
-                    : "bg-white border-gray-200 hover:border-gray-300",
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1">
-                      <Icon className={iconClassName} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{pr.title}</span>
-                        {isDraft && (
-                          <span
-                            className={cn(
-                              "text-[11px] px-2 py-0.5 rounded-full",
-                              theme === "dark"
-                                ? "bg-gray-700 text-gray-300"
-                                : "bg-gray-100 text-gray-600",
-                            )}
-                          >
-                            Draft
-                          </span>
-                        )}
-                      </div>
-                      <div
-                        className={cn(
-                          "text-xs mt-1",
-                          theme === "dark" ? "text-gray-400" : "text-gray-500",
-                        )}
-                      >
-                        {repoName} • #{pr.number} • by {pr.user.login}
-                      </div>
-                    </div>
+  return (
+    <ul className="space-y-2">
+      {prs.map((pr) => {
+        const { Icon, className: iconClassName } = getPRIconProps(pr, "w-4 h-4");
+        const repoName = `${pr.base.repo.owner.login}/${pr.base.repo.name}`;
+        const updatedLabel = formatDateTime(pr.updated_at);
+        const isDraft = pr.draft && pr.state === "open";
+
+        return (
+          <li key={getPRKey(pr)}>
+            <button
+              type="button"
+              onClick={() => onSelect(pr)}
+              className={cn(
+                "w-full text-left rounded-lg border p-3 transition hover:shadow-sm",
+                theme === "dark"
+                  ? "bg-gray-800 border-gray-700 hover:border-gray-600"
+                  : "bg-white border-gray-200 hover:border-gray-300",
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1">
+                    <Icon className={iconClassName} />
                   </div>
-                  <div
-                    className={cn(
-                      "text-xs whitespace-nowrap",
-                      theme === "dark" ? "text-gray-400" : "text-gray-500",
-                    )}
-                  >
-                    Updated {updatedLabel}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{pr.title}</span>
+                      {isDraft && (
+                        <span
+                          className={cn(
+                            "text-[11px] px-2 py-0.5 rounded-full",
+                            theme === "dark"
+                              ? "bg-gray-700 text-gray-300"
+                              : "bg-gray-100 text-gray-600",
+                          )}
+                        >
+                          Draft
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      className={cn(
+                        "text-xs mt-1",
+                        theme === "dark" ? "text-gray-400" : "text-gray-500",
+                      )}
+                    >
+                      {repoName} • #{pr.number} • by {pr.user.login}
+                    </div>
                   </div>
                 </div>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    )}
-  </div>
-);
+                <div
+                  className={cn(
+                    "text-xs whitespace-nowrap",
+                    theme === "dark" ? "text-gray-400" : "text-gray-500",
+                  )}
+                >
+                  Updated {updatedLabel}
+                </div>
+              </div>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+};
 
 export default function MeView() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { pullRequests } = usePRStore();
   const { theme } = useUIStore();
+  const [activeTab, setActiveTab] = useState<TabId>("opened");
+  const [selectedStatuses, setSelectedStatuses] = useState<Set<StatusFilter>>(
+    new Set(["open", "draft", "closed"]) // exclude merged by default
+  );
 
   const login = user?.login ?? "";
+
+  const toggleStatus = (status: StatusFilter) => {
+    setSelectedStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) {
+        next.delete(status);
+      } else {
+        next.add(status);
+      }
+      return next;
+    });
+  };
 
   const {
     openedByMe,
@@ -194,7 +203,9 @@ export default function MeView() {
       };
     }
 
-    const allPRs = Array.from(pullRequests.values());
+    const allPRs = Array.from(pullRequests.values()).filter((pr) =>
+      selectedStatuses.has(getPRStatus(pr))
+    );
     const opened = [] as PullRequest[];
     const review = [] as PullRequest[];
     const involvedPRs = [] as PullRequest[];
@@ -218,6 +229,9 @@ export default function MeView() {
         pr.changesRequestedBy?.some((reviewer) =>
           matchesLogin(reviewer.login, login),
         );
+      const isMentioned = pr.body
+        ? new RegExp(`@${login}\\b`, "i").test(pr.body)
+        : false;
 
       if (isAuthor) {
         opened.push(pr);
@@ -229,7 +243,7 @@ export default function MeView() {
         reviewKeys.add(key);
       }
 
-      if (isAuthor || isRequestedReviewer || isAssignee || isReviewer) {
+      if (isAuthor || isRequestedReviewer || isAssignee || isReviewer || isMentioned) {
         if (!openedKeys.has(key) && !reviewKeys.has(key)) {
           involvedPRs.push(pr);
         }
@@ -245,13 +259,26 @@ export default function MeView() {
       reviewRequested: review,
       involved: involvedPRs,
     };
-  }, [login, pullRequests]);
+  }, [login, pullRequests, selectedStatuses]);
 
   const handleSelectPR = (pr: PullRequest) => {
     navigate(
       `/pulls/${pr.base.repo.owner.login}/${pr.base.repo.name}/${pr.number}`,
     );
   };
+
+  const getTabPRs = (tabId: TabId): PullRequest[] => {
+    switch (tabId) {
+      case "opened":
+        return openedByMe;
+      case "review":
+        return reviewRequested;
+      case "involved":
+        return involved;
+    }
+  };
+
+  const activeTabData = tabs.find((t) => t.id === activeTab)!;
 
   return (
     <div
@@ -272,7 +299,7 @@ export default function MeView() {
           <div>
             <div className="flex items-center gap-2">
               <User className="w-5 h-5" />
-              <h1 className="text-2xl font-semibold">Me</h1>
+              <h1 className="text-2xl font-semibold">My Stuff</h1>
             </div>
             <p
               className={cn(
@@ -306,30 +333,91 @@ export default function MeView() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-          <PRSection
-            title="Opened by you"
-            description="PRs you created, sorted by most recent activity."
-            prs={openedByMe}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <div
+          className={cn(
+            "flex items-center justify-between border-b px-6",
+            theme === "dark" ? "border-gray-700" : "border-gray-200",
+          )}
+        >
+          <div className="flex">
+          {tabs.map((tab) => {
+            const count = getTabPRs(tab.id).length;
+            const isActive = activeTab === tab.id;
+            const TabIcon = tab.icon;
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors",
+                  isActive
+                    ? theme === "dark"
+                      ? "border-blue-500 text-blue-400"
+                      : "border-blue-600 text-blue-600"
+                    : theme === "dark"
+                      ? "border-transparent text-gray-400 hover:text-gray-200"
+                      : "border-transparent text-gray-500 hover:text-gray-700",
+                )}
+              >
+                <TabIcon className="w-4 h-4" />
+                {tab.label}
+                <span
+                  className={cn(
+                    "text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center",
+                    isActive
+                      ? theme === "dark"
+                        ? "bg-blue-500/20 text-blue-400"
+                        : "bg-blue-100 text-blue-600"
+                      : theme === "dark"
+                        ? "bg-gray-700 text-gray-400"
+                        : "bg-gray-100 text-gray-500",
+                  )}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+          </div>
+
+          <div className="flex items-center gap-1">
+            <Filter className={cn(
+              "w-4 h-4 mr-1",
+              theme === "dark" ? "text-gray-500" : "text-gray-400",
+            )} />
+            {statusFilters.map((filter) => {
+              const isSelected = selectedStatuses.has(filter.id);
+              return (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => toggleStatus(filter.id)}
+                  className={cn(
+                    "px-2 py-1 text-xs rounded-md transition-colors",
+                    isSelected
+                      ? theme === "dark"
+                        ? "bg-gray-700 text-gray-200"
+                        : "bg-gray-200 text-gray-800"
+                      : theme === "dark"
+                        ? "text-gray-500 hover:text-gray-300"
+                        : "text-gray-400 hover:text-gray-600",
+                  )}
+                >
+                  {filter.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          <PRList
+            prs={getTabPRs(activeTab)}
             theme={theme}
-            emptyMessage="No pull requests authored yet."
-            onSelect={handleSelectPR}
-          />
-          <PRSection
-            title="Needs your review"
-            description="Review requests assigned to you."
-            prs={reviewRequested}
-            theme={theme}
-            emptyMessage="No review requests right now."
-            onSelect={handleSelectPR}
-          />
-          <PRSection
-            title="You’re involved"
-            description="PRs where you’re an assignee or reviewer."
-            prs={involved}
-            theme={theme}
-            emptyMessage="No other PRs with your involvement."
+            emptyMessage={activeTabData.emptyMessage}
             onSelect={handleSelectPR}
           />
         </div>
