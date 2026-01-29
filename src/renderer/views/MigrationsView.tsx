@@ -168,7 +168,7 @@ export default function MigrationsView() {
   return (
     <div
       className={cn(
-        "flex flex-col h-full",
+        "flex flex-col h-full min-h-0",
         theme === "dark"
           ? "bg-gray-900 text-gray-100"
           : "bg-white text-gray-900"
@@ -232,7 +232,7 @@ export default function MigrationsView() {
       </div>
 
       {/* PR List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">

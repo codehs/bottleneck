@@ -76,7 +76,7 @@ const KanbanColumnComponent = React.memo(function KanbanColumnComponent({
   return (
     <div
       className={cn(
-        "flex flex-col h-full min-w-72 max-w-72",
+        "flex flex-col h-full min-h-0 min-w-72 max-w-72",
         column.bgColor,
         "border-r transition-all duration-200",
         theme === "dark" ? "border-gray-700" : "border-gray-200",
@@ -99,7 +99,7 @@ const KanbanColumnComponent = React.memo(function KanbanColumnComponent({
         </div>
       </div>
 
-      <div className="flex-1 p-2 space-y-2 overflow-y-auto">
+      <div className="flex-1 min-h-0 p-2 space-y-2 overflow-y-auto">
         {issues.length === 0 ? (
           <div
             className={cn(
@@ -341,7 +341,7 @@ export default function IssueTrackerView() {
 
   if (!hasApiKey) {
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full min-h-0">
         <div
           className={cn(
             "px-3 py-2 border-b",
@@ -363,7 +363,7 @@ export default function IssueTrackerView() {
   const totalIssues = filteredIssues.size;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       <div
         className={cn(
           "px-3 py-2 border-b",
@@ -409,7 +409,7 @@ export default function IssueTrackerView() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="flex items-center space-x-2">
@@ -426,8 +426,8 @@ export default function IssueTrackerView() {
         ) : totalIssues === 0 ? (
           <NoIssuesMessage theme={theme} />
         ) : (
-          <div className="h-full overflow-x-auto">
-            <div className="flex h-full min-w-max">
+          <div className="h-full min-h-0 overflow-x-auto">
+            <div className="flex h-full min-h-0 min-w-max">
               {KANBAN_COLUMNS.map((column) => (
                 <KanbanColumnComponent
                   key={column.id}

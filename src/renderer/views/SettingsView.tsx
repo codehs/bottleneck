@@ -287,7 +287,7 @@ export default function SettingsView() {
   }, []);
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full min-h-0">
       {/* Sidebar */}
       <div
         className={cn(
@@ -379,7 +379,7 @@ export default function SettingsView() {
       {/* Content */}
       <div
         className={cn(
-          "flex-1 overflow-y-auto",
+          "flex-1 min-h-0 overflow-y-auto",
           theme === "dark" ? "bg-gray-900" : "bg-white",
         )}
       >
