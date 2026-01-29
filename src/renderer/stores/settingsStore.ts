@@ -9,6 +9,9 @@ interface Settings {
   defaultBranch: string;
   cloneLocation: string;
 
+  // Integrations
+  linearApiKey: string;
+
   // Appearance
   theme: "dark" | "light" | "auto";
   fontSize: number;
@@ -66,6 +69,9 @@ const defaultSettings: Settings = {
   syncInterval: 5,
   defaultBranch: "main",
   cloneLocation: "~/repos",
+
+  // Integrations
+  linearApiKey: "",
 
   // Appearance
   theme: "dark",

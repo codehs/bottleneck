@@ -35,6 +35,7 @@ interface PRState {
   loading: boolean;
   error: string | null;
   isFetchingRepositories: boolean;
+  revision: number; // Increments on any PR data change, used to trigger dependent updates
 
   fetchPullRequests: (
     owner: string,
@@ -229,6 +230,7 @@ export const usePRStore = create<PRState>((set, get) => {
     loading: false,
     error: null,
     isFetchingRepositories: false,
+    revision: 0,
 
     fetchPullRequests: async (
       owner: string,
@@ -329,6 +331,7 @@ export const usePRStore = create<PRState>((set, get) => {
               loading: false,
               currentRepoKey: repoFullName,
               pendingRepoKey: null,
+              revision: state.revision + 1,
             };
           });
 
@@ -730,6 +733,7 @@ export const usePRStore = create<PRState>((set, get) => {
         return { 
           pullRequests: newPRs,
           repoPRCache: newCache,
+          revision: state.revision + 1,
         };
       });
 
@@ -744,6 +748,7 @@ export const usePRStore = create<PRState>((set, get) => {
       set((state) => {
         const newPRs = new Map(state.pullRequests);
         const newCache = new Map(state.repoPRCache);
+        let added = false;
 
         prs.forEach((pr) => {
           const key = `${pr.base.repo.owner.login}/${pr.base.repo.name}#${pr.number}`;
@@ -753,6 +758,7 @@ export const usePRStore = create<PRState>((set, get) => {
           // This prevents background fetches from overwriting user actions with stale API data
           if (!newPRs.has(key)) {
             newPRs.set(key, pr);
+            added = true;
             
             // Also update cache
             const repoPRs = newCache.get(repoKey) || new Map<string, PullRequest>();
@@ -765,6 +771,7 @@ export const usePRStore = create<PRState>((set, get) => {
         return { 
           pullRequests: newPRs,
           repoPRCache: newCache,
+          revision: added ? state.revision + 1 : state.revision,
         };
       });
 
@@ -796,6 +803,7 @@ export const usePRStore = create<PRState>((set, get) => {
         // Update the PRs with the fetched stats
         set((state) => {
           const newPRs = new Map(state.pullRequests);
+          let updated = false;
           stats.forEach((stat, prNumber) => {
             const prKey = `${owner}/${repo}#${prNumber}`;
             const pr = newPRs.get(prKey);
@@ -806,9 +814,13 @@ export const usePRStore = create<PRState>((set, get) => {
                 deletions: stat.deletions,
                 changed_files: stat.changed_files,
               });
+              updated = true;
             }
           });
-          return { pullRequests: newPRs };
+          return { 
+            pullRequests: newPRs,
+            revision: updated ? state.revision + 1 : state.revision,
+          };
         });
       } catch (error) {
         console.error("Failed to fetch PR stats:", error);

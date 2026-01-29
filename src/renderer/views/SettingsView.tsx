@@ -23,6 +23,10 @@ import {
   UserPlus,
   UserMinus,
   Heart,
+  Link2,
+  Eye,
+  EyeOff,
+  ExternalLink,
 } from "lucide-react";
 import { useAuthStore } from "../stores/authStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -53,7 +57,7 @@ export default function SettingsView() {
   const { theme } = useUIStore();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<
-    "general" | "appearance" | "notifications" | "advanced" | "teams" | "repositories" | "people" | "organizations" | "following"
+    "general" | "appearance" | "notifications" | "advanced" | "teams" | "repositories" | "people" | "organizations" | "following" | "integrations"
   >(() => {
     const state = location.state as { openTab?: string } | null;
     if (state?.openTab === "following") {
@@ -237,8 +241,12 @@ export default function SettingsView() {
     { id: "people", label: "People", icon: Users },
     { id: "following", label: "Following", icon: Heart },
     { id: "teams", label: "Teams", icon: Users },
+    { id: "integrations", label: "Integrations", icon: Link2 },
     { id: "advanced", label: "Advanced", icon: Code },
   ];
+
+  // State for showing/hiding API key
+  const [showLinearApiKey, setShowLinearApiKey] = useState(false);
 
   return (
     <div className="flex h-full">
@@ -1266,6 +1274,146 @@ export default function SettingsView() {
                     })}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "integrations" && (
+            <div className="space-y-6">
+              <div>
+                <h2
+                  className={cn(
+                    "text-lg font-semibold mb-4",
+                    theme === "dark" ? "text-white" : "text-gray-900",
+                  )}
+                >
+                  Integrations
+                </h2>
+
+                <div className="space-y-6">
+                  {/* Linear Integration */}
+                  <div
+                    className={cn(
+                      "p-4 rounded-lg border",
+                      theme === "dark"
+                        ? "bg-gray-800 border-gray-700"
+                        : "bg-gray-50 border-gray-200",
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className={cn(
+                            "w-10 h-10 rounded-lg flex items-center justify-center",
+                            theme === "dark" ? "bg-purple-900/50" : "bg-purple-100",
+                          )}
+                        >
+                          <Link2
+                            className={cn(
+                              "w-5 h-5",
+                              theme === "dark" ? "text-purple-400" : "text-purple-600",
+                            )}
+                          />
+                        </div>
+                        <div>
+                          <h3
+                            className={cn(
+                              "font-medium",
+                              theme === "dark" ? "text-white" : "text-gray-900",
+                            )}
+                          >
+                            Linear
+                          </h3>
+                          <p
+                            className={cn(
+                              "text-xs",
+                              theme === "dark" ? "text-gray-400" : "text-gray-600",
+                            )}
+                          >
+                            View Linear issues linked to your PRs
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href="https://linear.app/settings/api"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                          "flex items-center gap-1 text-xs",
+                          "text-blue-500 hover:text-blue-400",
+                        )}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Get API Key
+                      </a>
+                    </div>
+
+                    <div>
+                      <label
+                        className={cn(
+                          "label text-sm",
+                          theme === "dark" ? "text-gray-300" : "text-gray-700",
+                        )}
+                      >
+                        API Key
+                      </label>
+                      <div className="flex items-stretch space-x-2">
+                        <div className="relative flex-1">
+                          <input
+                            type={showLinearApiKey ? "text" : "password"}
+                            value={settings.linearApiKey}
+                            onChange={(e) =>
+                              updateSettings({ linearApiKey: e.target.value })
+                            }
+                            placeholder="lin_api_..."
+                            className={cn(
+                              "input w-full pr-10",
+                              theme === "dark"
+                                ? "bg-gray-700 border-gray-600 text-white placeholder-gray-500"
+                                : "bg-white border-gray-300 text-gray-900 placeholder-gray-400",
+                            )}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowLinearApiKey(!showLinearApiKey)}
+                            className={cn(
+                              "absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded",
+                              theme === "dark"
+                                ? "text-gray-400 hover:text-gray-300"
+                                : "text-gray-500 hover:text-gray-700",
+                            )}
+                          >
+                            {showLinearApiKey ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      <p
+                        className={cn(
+                          "text-xs mt-2",
+                          theme === "dark" ? "text-gray-500" : "text-gray-500",
+                        )}
+                      >
+                        Your API key is stored locally and never sent to our servers.
+                      </p>
+                    </div>
+
+                    {settings.linearApiKey && (
+                      <div
+                        className={cn(
+                          "mt-3 flex items-center gap-2 text-sm",
+                          theme === "dark" ? "text-green-400" : "text-green-600",
+                        )}
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Connected</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}
