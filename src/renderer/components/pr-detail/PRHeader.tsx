@@ -181,8 +181,8 @@ export function PRHeader({
 
           {pr.state === "open" && !pr.merged && (
             <>
-              {/* Draft toggle button - only show for PR authors */}
-              {isAuthor && onToggleDraft && (
+              {/* Draft toggle button */}
+              {onToggleDraft && (
                 <button
                   onClick={onToggleDraft}
                   disabled={isTogglingDraft}

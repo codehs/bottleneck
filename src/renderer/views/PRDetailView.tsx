@@ -986,12 +986,6 @@ export default function PRDetailView() {
   const handleToggleDraft = async () => {
     if (!pr || !token || !owner || !repo || !currentUser) return;
 
-    // Check if user is the PR author
-    if (pr.user.login !== currentUser.login) {
-      alert("Only the pull request author can change the draft status.");
-      return;
-    }
-
     const targetDraftState = !pr.draft;
 
     console.log("Toggling draft status:", {
