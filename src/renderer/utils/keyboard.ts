@@ -1,11 +1,12 @@
 import { useUIStore } from "../stores/uiStore";
 
 function navigateBack() {
-  const pathname = window.location.pathname;
+  const pathname = window.location.hash.replace(/^#/, '') || '/';
   const isPRDetail = /^\/pulls\/[^/]+\/[^/]+\/\d+$/.test(pathname);
   const isIssueDetail = /^\/issues\/[^/]+\/[^/]+\/\d+$/.test(pathname);
 
   if (!isPRDetail && !isIssueDetail) return;
+
 
   const nav = (window as any).__commandNavigate;
   if (!nav) return;
