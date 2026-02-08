@@ -138,8 +138,8 @@ export function setupKeyboardShortcuts() {
         return;
       }
 
-      // Navigate back (Cmd/Ctrl + Left Arrow)
-      if (e.key === "ArrowLeft") {
+      // Navigate back (Cmd/Ctrl + Shift + Left Arrow)
+      if (e.key === "ArrowLeft" && e.shiftKey) {
         e.preventDefault();
         navigateBack();
         return;
