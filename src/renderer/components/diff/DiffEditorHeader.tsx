@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, useState } from "react";
 import {
   Eye,
   Columns,
@@ -11,6 +11,7 @@ import {
   FileEdit,
   Minimize2,
   Maximize2,
+  Copy,
 } from "lucide-react";
 import { File } from "../../services/github";
 import { cn } from "../../utils/cn";
@@ -51,6 +52,18 @@ export const DiffEditorHeader: FC<DiffEditorHeaderProps> = ({
   onToggleHideUnchanged,
   onMarkViewed,
 }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyFilename = async () => {
+    try {
+      await navigator.clipboard.writeText(file.filename);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
   const isDark = theme === "dark";
   const fullFileTitle = canShowFullFile
     ? showFullFile
@@ -69,7 +82,7 @@ export const DiffEditorHeader: FC<DiffEditorHeaderProps> = ({
       )}
     >
       <div className="flex items-center space-x-3">
-        <h3 className="font-mono text-sm font-semibold flex items-center gap-2">
+        <h3 className="font-mono text-sm font-semibold flex items-center gap-2 group/filename">
           {file.status === "added" && (
             <FilePlus className="w-4 h-4 text-green-600" />
           )}
@@ -82,6 +95,17 @@ export const DiffEditorHeader: FC<DiffEditorHeaderProps> = ({
           <span className={isDark ? "text-gray-100" : "text-gray-900"}>
             {file.filename}
           </span>
+          <button
+            onClick={handleCopyFilename}
+            className="btn btn-ghost p-0.5 opacity-0 group-hover/filename:opacity-100 transition-opacity"
+            title="Copy filename"
+          >
+            {copied ? (
+              <Check className="w-3 h-3 text-green-500" />
+            ) : (
+              <Copy className="w-3 h-3" />
+            )}
+          </button>
         </h3>
         <div className="flex items-center space-x-2 text-xs">
           {file.status === "added" ? (
