@@ -208,7 +208,7 @@ export default function DevinView() {
   }, [recentlyViewedRepos.length]);
 
   const handleNavigate = (owner: string, repo: string, prNumber: number) => {
-    navigate(`/pr/${owner}/${repo}/${prNumber}?tab=comments`);
+    navigate(`/pulls/${owner}/${repo}/${prNumber}?tab=comments`);
   };
 
   const handleRefresh = () => {
