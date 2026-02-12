@@ -3,7 +3,7 @@ import {
   Search, X, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users, Tag, Ship, RefreshCw, Pencil,
   PanelLeftClose, PanelRightClose, Moon, Columns, Eye, WrapText, Settings, GitPullRequest, Home,
   GitBranch, CircleDot, User, BarChart3, Activity, Database, Flame, Keyboard, CheckCircle, XCircle,
-  MessageSquare, Copy, Star, Bell
+  MessageSquare, Copy, Star, Bell, Bot
 } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
@@ -221,6 +221,17 @@ const commands: Command[] = [
       if (nav) nav("/notifications");
     },
     preview: <div>View your GitHub notifications</div>,
+  },
+  {
+    id: "nav-devin",
+    name: "Go to Devin Review Comments",
+    keywords: "navigate devin agent ai review comments code feedback",
+    icon: Bot,
+    action: () => {
+      const nav = window.__commandNavigate;
+      if (nav) nav("/agents/devin");
+    },
+    preview: <div>View unresolved Devin code review comments</div>,
   },
   {
     id: "show-shortcuts",
