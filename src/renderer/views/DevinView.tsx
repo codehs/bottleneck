@@ -192,20 +192,16 @@ function DevinCommentCard({
 export default function DevinView() {
   const { theme } = useUIStore();
   const navigate = useNavigate();
-  const { comments, loading, error, lastFetched, fetchDevinComments } = useDevinStore();
+  const { comments, loading, error, lastFetched, cacheLoaded, fetchDevinComments } = useDevinStore();
   const { recentlyViewedRepos } = usePRStore();
   const isDark = theme === "dark";
 
-  // Fetch on mount and when repos change
+  // Always fetch in background when viewing the page (cache provides instant display)
   useEffect(() => {
-    // Only fetch if we have repos and haven't fetched recently (within 5 minutes)
-    const shouldFetch = recentlyViewedRepos.length > 0 && 
-      (!lastFetched || Date.now() - lastFetched > 5 * 60 * 1000);
-    
-    if (shouldFetch) {
+    if (recentlyViewedRepos.length > 0 && cacheLoaded) {
       fetchDevinComments();
     }
-  }, [recentlyViewedRepos.length]);
+  }, [recentlyViewedRepos.length, cacheLoaded]);
 
   const handleNavigate = (owner: string, repo: string, prNumber: number) => {
     navigate(`/pulls/${owner}/${repo}/${prNumber}?tab=comments`, {
@@ -319,8 +315,8 @@ export default function DevinView() {
             </div>
           )}
 
-          {/* Loading state */}
-          {loading && comments.length === 0 && (
+          {/* Loading state - only show skeleton when no cached data */}
+          {loading && comments.length === 0 && !lastFetched && (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
                 <div
