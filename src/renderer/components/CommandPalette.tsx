@@ -3,7 +3,7 @@ import {
   Search, X, ExternalLink, Github, Play, Laptop, Rocket, Zap, Flag, Users, Tag, Ship, RefreshCw, Pencil,
   PanelLeftClose, PanelRightClose, Moon, Columns, Eye, WrapText, Settings, GitPullRequest, Home,
   GitBranch, CircleDot, User, BarChart3, Activity, Database, Flame, Keyboard, CheckCircle, XCircle,
-  MessageSquare, Copy, Star, Bell, Bot
+  MessageSquare, Copy, Star, Bell, Bot, Check
 } from "lucide-react";
 import { cn } from "../utils/cn";
 import { useUIStore } from "../stores/uiStore";
@@ -300,6 +300,7 @@ export default function CommandPalette() {
    const [isPreviewKey, setIsPreviewKey] = useState(false);
    const [isURLMode, setIsURLMode] = useState(false);
    const [prForURLs, setPRForURLs] = useState<any>(null);
+   const [copiedCommandId, setCopiedCommandId] = useState<string | null>(null);
 
   const contextualCommands = useMemo(() => {
     const cmds: Command[] = [];
@@ -388,6 +389,16 @@ export default function CommandPalette() {
           useUIStore.getState().triggerEditDescription();
         },
         preview: <div>Edit the PR description (author only)</div>,
+      });
+      cmds.push({
+        id: "copy-github-url",
+        name: "Copy GitHub URL",
+        keywords: "copy github url link clipboard",
+        icon: Copy,
+        action: () => {
+          navigator.clipboard.writeText(`https://github.com/${owner}/${repo}/pull/${prNumber}`);
+        },
+        preview: <div>Copy the GitHub URL for this PR to clipboard</div>,
       });
       cmds.push({
         id: "copy-gh-checkout",
@@ -681,6 +692,7 @@ export default function CommandPalette() {
       setSelectedIndex(0);
       setIsURLMode(false);
       setPRForURLs(null);
+      setCopiedCommandId(null);
     }
   }, [commandPaletteOpen]);
 
@@ -708,8 +720,7 @@ export default function CommandPalette() {
       }
       if (e.key === "Enter") {
         e.preventDefault();
-        flattenedForIndex[selectedIndex]?.action();
-        toggleCommandPalette();
+        executeCommand(flattenedForIndex[selectedIndex]);
       }
       if (e.metaKey || e.ctrlKey) {
         setIsPreviewKey(true);
@@ -720,6 +731,21 @@ export default function CommandPalette() {
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, [commandPaletteOpen, flattenedForIndex, selectedIndex, toggleCommandPalette, isURLMode]);
+
+  const isCopyCommand = (cmd: Command | null) => cmd?.id?.startsWith("copy-");
+
+  const executeCommand = (cmd: Command | null) => {
+    if (!cmd) return;
+    cmd.action();
+    if (isCopyCommand(cmd)) {
+      setCopiedCommandId(cmd.id);
+      setTimeout(() => {
+        toggleCommandPalette();
+      }, 600);
+    } else {
+      toggleCommandPalette();
+    }
+  };
 
   if (!commandPaletteOpen) return null;
 
@@ -782,10 +808,7 @@ export default function CommandPalette() {
                   <li
                     key={cmd.id}
                     onMouseEnter={() => setSelectedIndex(globalIdx)}
-                    onClick={() => {
-                      cmd.action();
-                      toggleCommandPalette();
-                    }}
+                    onClick={() => executeCommand(cmd)}
                     className={cn(
                       "flex items-center justify-between px-4 py-3 cursor-pointer text-sm",
                       globalIdx === selectedIndex
@@ -795,12 +818,16 @@ export default function CommandPalette() {
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                        {cmd.icon && (
-                         <span className="flex-shrink-0 text-gray-600 dark:text-gray-400">
-                           {React.createElement(cmd.icon, { className: "w-4 h-4" })}
+                         <span className={cn("flex-shrink-0", copiedCommandId === cmd.id ? "text-green-500" : "text-gray-600 dark:text-gray-400")}>
+                           {copiedCommandId === cmd.id
+                             ? <Check className="w-4 h-4" />
+                             : React.createElement(cmd.icon, { className: "w-4 h-4" })}
                          </span>
                        )}
                        <div className="flex-1 min-w-0">
-                         <span className="truncate block">{cmd.name}</span>
+                         <span className="truncate block">
+                           {copiedCommandId === cmd.id ? "Copied!" : cmd.name}
+                         </span>
                        </div>
                      </div>
                     {cmd.shortcut && <span className="opacity-60 ml-2 flex-shrink-0">{cmd.shortcut}</span>}
