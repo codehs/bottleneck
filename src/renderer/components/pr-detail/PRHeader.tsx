@@ -13,6 +13,7 @@ import {
   Clock,
   ExternalLink,
   RefreshCw,
+  Copy,
 } from "lucide-react";
 import { PullRequest } from "../../services/github";
 import { formatDistanceToNow } from "date-fns";
@@ -59,6 +60,7 @@ export function PRHeader({
   const navigate = useNavigate();
   const location = useLocation();
   const [showCheckoutDropdown, setShowCheckoutDropdown] = useState(false);
+  const [copiedURL, setCopiedURL] = useState(false);
   
   const backPath = (location.state as { from?: string } | null)?.from || "/pulls";
   const checkoutDropdownRef = useRef<HTMLDivElement>(null);
@@ -142,6 +144,26 @@ export function PRHeader({
                 <span className="text-xs">Open in Github</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `https://github.com/${pr.base.repo.owner.login}/${pr.base.repo.name}/pull/${pr.number}`
+                  );
+                  setCopiedURL(true);
+                  setTimeout(() => setCopiedURL(false), 2000);
+                }}
+                className={cn(
+                  "px-2 py-0.5 rounded transition-colors inline-flex items-center space-x-1 align-middle font-normal",
+                  copiedURL
+                    ? "text-green-500"
+                    : theme === "dark"
+                      ? "hover:bg-gray-700 text-gray-400 hover:text-gray-200"
+                      : "hover:bg-gray-100 text-gray-600 hover:text-gray-900",
+                )}
+                title="Copy GitHub URL"
+              >
+                {copiedURL ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+              </button>
             </h1>
           </div>
         </div>
