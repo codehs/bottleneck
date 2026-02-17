@@ -10,8 +10,9 @@ Rapidly create pull requests on GitHub using the `gh` CLI with automatic descrip
 ## Quick Start
 
 ```bash
-# Create a PR from current branch to master
+# Create a PR from current branch to master (always targets codehs/bottleneck)
 gh pr create --base master --head $(git branch --show-current) \
+  --repo codehs/bottleneck \
   --title "Your title" \
   --body "Your description"
 ```
@@ -102,6 +103,7 @@ Implemented with optimistic updates pattern for instant UI feedback.
 - **Reference threads** in PR body for development context
 - **Check commit count** - `git log master..HEAD --oneline` should show your work
 - **Verify target branch** - default is `master`, not `main` in this repo
+- **Always specify `--repo codehs/bottleneck`** - PRs ALWAYS go to the upstream repo, not forks
 
 ## Debugging
 
