@@ -18,6 +18,7 @@ import {
   XCircle,
   Clock,
   FileText,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "../utils/cn";
 import { getPRIcon, getPRColorClass } from "../utils/prStatus";
@@ -637,6 +638,22 @@ export function PRTreeView({
                                )}
                              </div>
                            )}
+
+                          {/* Merge conflicts */}
+                          {item.data.pr.mergeable === false && (
+                            <span
+                              className={cn(
+                                "flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium opacity-80",
+                                theme === "dark"
+                                  ? "bg-red-500/20 text-red-400"
+                                  : "bg-red-100 text-red-700"
+                              )}
+                              title="This PR has merge conflicts"
+                            >
+                              <AlertCircle className="w-3 h-3" />
+                              Conflicts
+                            </span>
+                          )}
 
                           {/* Linear issues */}
                           {(() => {
