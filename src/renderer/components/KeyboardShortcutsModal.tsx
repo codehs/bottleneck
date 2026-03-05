@@ -33,7 +33,7 @@ const SHORTCUTS = [
     category: "PR Actions",
     shortcuts: [
       { keys: ["Cmd", "Shift", "A"], description: "Go to PR homepage" },
-      { keys: ["Cmd", "L"], description: "Add label" },
+      { keys: ["Cmd", "Shift", "L"], description: "Edit labels" },
       { keys: ["Cmd", "Shift", "C"], description: "Focus comment box" },
       { keys: ["Cmd", "Option", "C"], description: "Copy filename" },
       { keys: ["Cmd", "Shift", "H"], description: "Go to home (PR list)" },
@@ -56,7 +56,6 @@ const SHORTCUTS = [
       { keys: ["Cmd", "Shift", "T"], description: "Toggle theme (light/dark)" },
       { keys: ["Cmd", "Shift", "D"], description: "Toggle diff view (unified/split)" },
       { keys: ["Cmd", "Shift", "W"], description: "Toggle whitespace visibility" },
-      { keys: ["Cmd", "Shift", "L"], description: "Toggle word wrap" },
     ],
   },
 ];

@@ -90,14 +90,10 @@ export function setupKeyboardShortcuts() {
         return;
       }
 
-      // Add label (Cmd/Ctrl + L) - only on PR detail page (handled via menu IPC)
-      // This fallback is kept for the renderer keyboard handler, but the menu
-      // handles the actual shortcut detection on macOS/Windows
-
-      // Toggle word wrap (Cmd/Ctrl + Shift + L)
+      // Edit labels (Cmd/Ctrl + Shift + L) - only on PR detail page
       if ((e.key === "l" || e.key === "L") && e.shiftKey) {
         e.preventDefault();
-        useUIStore.getState().toggleWordWrap();
+        useUIStore.getState().setAddLabelDialogOpen(true);
         return;
       }
 
@@ -187,10 +183,7 @@ export function setupKeyboardShortcuts() {
   };
 
   const handleAddLabel = () => {
-    const pathMatch = window.location.pathname.match(/^\/pulls\/([^/]+)\/([^/]+)\/(\d+)$/);
-    if (pathMatch) {
-      useUIStore.getState().setAddLabelDialogOpen(true);
-    }
+    useUIStore.getState().setAddLabelDialogOpen(true);
   };
 
   const handleSwipeBack = () => {
