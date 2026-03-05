@@ -201,7 +201,7 @@ export function createMenu(mainWindow: BrowserWindow): Menu {
       submenu: [
         {
           label: "Add Label",
-          accelerator: "CmdOrCtrl+L",
+          accelerator: "CmdOrCtrl+Shift+L",
           click: () => {
             mainWindow.webContents.send("add-label");
           },
