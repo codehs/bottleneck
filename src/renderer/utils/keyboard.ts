@@ -90,6 +90,20 @@ export function setupKeyboardShortcuts() {
         return;
       }
 
+      // Resync PR (Cmd/Ctrl + Shift + R) - only on PR detail page
+      if ((e.key === "r" || e.key === "R") && e.shiftKey) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("pr-action:resync"));
+        return;
+      }
+
+      // Request reviewers (Cmd/Ctrl + R) - only on PR detail page
+      if ((e.key === "r" || e.key === "R") && !e.shiftKey) {
+        e.preventDefault();
+        useUIStore.getState().setAddReviewersDialogOpen(true);
+        return;
+      }
+
       // Edit labels (Cmd/Ctrl + Shift + L) - only on PR detail page
       if ((e.key === "l" || e.key === "L") && e.shiftKey) {
         e.preventDefault();
