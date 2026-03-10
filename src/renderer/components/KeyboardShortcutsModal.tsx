@@ -33,6 +33,8 @@ const SHORTCUTS = [
     category: "PR Actions",
     shortcuts: [
       { keys: ["Cmd", "Shift", "A"], description: "Go to PR homepage" },
+      { keys: ["Cmd", "R"], description: "Request reviewers" },
+      { keys: ["Cmd", "Shift", "R"], description: "Resync current PR" },
       { keys: ["Cmd", "Shift", "L"], description: "Edit labels" },
       { keys: ["Cmd", "Shift", "C"], description: "Focus comment box" },
       { keys: ["Cmd", "Option", "C"], description: "Copy filename" },
